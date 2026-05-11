@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, Star } from "lucide-react";
+import { ArrowLeft, Download, ShoppingCart, Loader2 } from "lucide-react";
 import { formatCurrency, formatDate, qualityTierLabel } from "@/lib/utils";
 
 interface LineItem {
@@ -30,12 +30,23 @@ export default function RFQDetailPage() {
   const router = useRouter();
   const [rfq, setRfq] = useState<RFQ | null>(null);
   const [loading, setLoading] = useState(true);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/agent/rfqs/${id}`)
       .then(r => r.json())
       .then(data => { setRfq(data); setLoading(false); });
   }, [id]);
+
+  async function handleConvertToOrder() {
+    if (!confirm("Convert this quotation to an order? This will send purchase orders to all suppliers.")) return;
+    setConverting(true);
+    const res = await fetch(`/api/agent/rfqs/${id}/convert`, { method: "POST" });
+    const data = await res.json();
+    setConverting(false);
+    if (res.ok) router.push(`/agent/orders/${data.order_id}`);
+    else alert(data.error ?? "Failed to convert");
+  }
 
   if (loading) return <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>;
   if (!rfq) return <div className="text-center py-16 text-destructive">RFQ not found.</div>;
@@ -59,11 +70,20 @@ export default function RFQDetailPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">Created {formatDate(rfq.created_at)}</p>
         </div>
-        {(rfq.status === "sent" || rfq.status === "confirmed") && (
-          <Button variant="outline" size="sm" onClick={() => window.open(`/api/agent/rfqs/${id}/pdf`, "_blank")}>
-            <Download className="h-4 w-4 mr-1.5" /> Download PDF
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {(rfq.status === "sent" || rfq.status === "confirmed") && (
+            <Button variant="outline" size="sm" onClick={() => window.open(`/api/agent/rfqs/${id}/pdf`, "_blank")}>
+              <Download className="h-4 w-4 mr-1.5" /> Download PDF
+            </Button>
+          )}
+          {rfq.status === "sent" && (
+            <Button size="sm" onClick={handleConvertToOrder} disabled={converting}>
+              {converting
+                ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Converting…</>
+                : <><ShoppingCart className="h-4 w-4 mr-1.5" /> Buyer Confirmed — Create Order</>}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Parties */}
