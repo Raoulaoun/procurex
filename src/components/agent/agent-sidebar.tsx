@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileText, PlusCircle, LayoutGrid, ShoppingCart } from "lucide-react";
+import { FileText, PlusCircle, LayoutGrid, ShoppingCart, Receipt } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem { label: string; href: string; icon: LucideIcon; exact?: boolean }
@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { label: "My RFQs", href: "/agent/rfqs", icon: FileText },
   { label: "New RFQ", href: "/agent/rfqs/new", icon: PlusCircle },
   { label: "Orders", href: "/agent/orders", icon: ShoppingCart },
+  { label: "Invoices", href: "/agent/invoices", icon: Receipt },
 ];
 
 export function AgentSidebar() {

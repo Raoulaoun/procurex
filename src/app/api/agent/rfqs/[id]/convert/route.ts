@@ -108,6 +108,21 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
 
     // 4. Mark RFQ as confirmed
     await tx.rFQ.update({ where: { id: rfqId }, data: { status: "confirmed" } });
+    // Mark order invoice_generated flag
+    await tx.order.update({ where: { id: newOrder.id }, data: { invoice_generated: true } });
+
+    // 5. Auto-generate draft invoice for the buyer
+    const dueAt = new Date();
+    dueAt.setDate(dueAt.getDate() + 30);
+    await tx.invoice.create({
+      data: {
+        order_id: newOrder.id,
+        buyer_id: rfq.buyer_id,
+        amount: total_amount,
+        status: "draft",
+        due_at: dueAt,
+      },
+    });
 
     return newOrder;
   });
