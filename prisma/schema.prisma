@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  super_admin
+  agent
+  buyer_agent
+}
+
+enum SupplierStatus {
+  active
+  inactive
+  suspended
+}
+
+enum StockStatus {
+  ok
+  low
+  out
+}
+
+enum QualityTier {
+  tier_1
+  tier_2
+  tier_3
+}
+
+enum RFQStatus {
+  draft
+  sent
+  confirmed
+  cancelled
+}
+
+enum OrderStatus {
+  confirmed
+  processing
+  partially_delivered
+  delivered
+}
+
+enum SubPOStatus {
+  sent
+  acknowledged
+  dispatched
+  delivered
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+}
+
+enum CommissionStatus {
+  pending
+  paid
+}
+
+enum AgentStatus {
+  active
+  inactive
+}
+
+// ─── Core Models ─────────────────────────────────────────────────────────────
+
+model UserProfile {
+  id         String   @id @default(uuid()) // matches Supabase auth.users id
+  email      String   @unique
+  role       UserRole
+  created_at DateTime @default(now())
+
+  agent Agent?
+
+  @@map("user_profiles")
+}
+
+model Agent {
+  id              String      @id @default(uuid())
+  user_id         String      @unique
+  full_name       String
+  email           String      @unique
+  commission_rate Decimal     @db.Decimal(5, 2) // e.g. 10.00 = 10%
+  total_earned    Decimal     @default(0) @db.Decimal(12, 2)
+  status          AgentStatus @default(active)
+  created_at      DateTime    @default(now())
+
+  user        UserProfile  @relation(fields: [user_id], references: [id])
+  buyers      Buyer[]
+  rfqs        RFQ[]
+  orders      Order[]
+  commissions Commission[]
+
+  @@map("agents")
+}
+
+model Buyer {
+  id               String   @id @default(uuid())
+  name             String
+  company          String
+  email            String
+  phone            String?
+  address          String?
+  assigned_agent_id String
+  created_at       DateTime @default(now())
+
+  agent    Agent     @relation(fields: [assigned_agent_id], references: [id])
+  rfqs     RFQ[]
+  orders   Order[]
+  invoices Invoice[]
+  surveys  QASurvey[]
+
+  @@map("buyers")
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  name_ar      String
+  margin_pct   Decimal       @default(10) @db.Decimal(5, 2) // minimum 10%
+  created_at   DateTime      @default(now())
+
+  subcategories Subcategory[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String   @id @default(uuid())
+  category_id String
+  name        String
+  name_ar     String
+  created_at  DateTime @default(now())
+
+  category Category  @relation(fields: [category_id], references: [id])
+  products Product[]
+
+  @@map("subcategories")
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  subcategory_id String
+  name           String
+  name_ar        String
+  description    String?
+  unit           String   // e.g. "kg", "pcs", "box"
+  created_at     DateTime @default(now())
+
+  subcategory       Subcategory        @relation(fields: [subcategory_id], references: [id])
+  supplier_products SupplierProduct[]
+  rfq_line_items    RFQLineItem[]
+  subpo_line_items  SubPOLineItem[]
+
+  @@map("products")
+}
+
+model Supplier {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  phone         String?
+  country       String
+  status        SupplierStatus @default(active)
+  quality_score Decimal        @default(0) @db.Decimal(4, 2) // rolling average 0–10
+  created_at    DateTime       @default(now())
+
+  supplier_products SupplierProduct[]
+  subpos            SubPO[]
+
+  @@map("suppliers")
+}
+
+model SupplierProduct {
+  id           String      @id @default(uuid())
+  supplier_id  String
+  product_id   String
+  unit_price   Decimal     @db.Decimal(12, 2)
+  currency     String      @default("USD")
+  lead_time_days Int
+  moq          Int         @default(1) // minimum order quantity
+  quality_tier QualityTier
+  stock_status StockStatus @default(ok)
+  last_updated DateTime    @default(now()) @updatedAt
+
+  supplier         Supplier      @relation(fields: [supplier_id], references: [id])
+  product          Product       @relation(fields: [product_id], references: [id])
+  rfq_line_items   RFQLineItem[]
+
+  @@unique([supplier_id, product_id])
+  @@map("supplier_products")
+}
+
+// ─── RFQ & Quotation ─────────────────────────────────────────────────────────
+
+model RFQ {
+  id         String    @id @default(uuid())
+  agent_id   String
+  buyer_id   String
+  status     RFQStatus @default(draft)
+  notes      String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  agent      Agent         @relation(fields: [agent_id], references: [id])
+  buyer      Buyer         @relation(fields: [buyer_id], references: [id])
+  line_items RFQLineItem[]
+  order      Order?
+
+  @@map("rfqs")
+}
+
+model RFQLineItem {
+  id                         String   @id @default(uuid())
+  rfq_id                     String
+  product_id                 String
+  quantity                   Decimal  @db.Decimal(12, 3)
+  selected_supplier_product_id String?
+  selected_unit_price        Decimal? @db.Decimal(12, 2)
+  margin_pct                 Decimal? @db.Decimal(5, 2) // applied from category
+  buyer_unit_price           Decimal? @db.Decimal(12, 2) // price shown to buyer (cost + margin)
+
+  rfq                      RFQ              @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+  product                  Product          @relation(fields: [product_id], references: [id])
+  selected_supplier_product SupplierProduct? @relation(fields: [selected_supplier_product_id], references: [id])
+
+  @@map("rfq_line_items")
+}
+
+// ─── Orders & Sub-POs ────────────────────────────────────────────────────────
+
+model Order {
+  id                String      @id @default(uuid())
+  rfq_id            String      @unique
+  buyer_id          String
+  agent_id          String
+  status            OrderStatus @default(confirmed)
+  total_amount      Decimal     @db.Decimal(12, 2) // billed to buyer
+  cost_amount       Decimal     @db.Decimal(12, 2) // sum of supplier costs
+  margin_amount     Decimal     @db.Decimal(12, 2) // total_amount - cost_amount
+  invoice_generated Boolean     @default(false)
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  rfq        RFQ          @relation(fields: [rfq_id], references: [id])
+  buyer      Buyer        @relation(fields: [buyer_id], references: [id])
+  agent      Agent        @relation(fields: [agent_id], references: [id])
+  subpos     SubPO[]
+  invoices   Invoice[]
+  surveys    QASurvey[]
+  commission Commission?
+
+  @@map("orders")
+}
+
+model SubPO {
+  id           String      @id @default(uuid())
+  order_id     String
+  supplier_id  String
+  status       SubPOStatus @default(sent)
+  sent_at      DateTime?
+  acknowledged_at DateTime?
+  dispatched_at   DateTime?
+  delivered_at    DateTime?
+  total_amount Decimal     @db.Decimal(12, 2)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  order      Order          @relation(fields: [order_id], references: [id])
+  supplier   Supplier       @relation(fields: [supplier_id], references: [id])
+  line_items SubPOLineItem[]
+
+  @@map("sub_pos")
+}
+
+model SubPOLineItem {
+  id         String  @id @default(uuid())
+  subpo_id   String
+  product_id String
+  quantity   Decimal @db.Decimal(12, 3)
+  unit_price Decimal @db.Decimal(12, 2)
+
+  subpo   SubPO   @relation(fields: [subpo_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id])
+
+  @@map("sub_po_line_items")
+}
+
+// ─── Invoicing ───────────────────────────────────────────────────────────────
+
+model Invoice {
+  id        String        @id @default(uuid())
+  order_id  String
+  buyer_id  String
+  amount    Decimal       @db.Decimal(12, 2)
+  status    InvoiceStatus @default(draft)
+  issued_at DateTime      @default(now())
+  due_at    DateTime
+  pdf_url   String?
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+  buyer Buyer @relation(fields: [buyer_id], references: [id])
+
+  @@map("invoices")
+}
+
+// ─── QA Survey ───────────────────────────────────────────────────────────────
+
+model QASurvey {
+  id               String   @id @default(uuid())
+  order_id         String
+  buyer_id         String
+  delivery_score   Int      // 1–5
+  quality_score    Int
+  accuracy_score   Int
+  packaging_score  Int
+  overall_score    Decimal  @db.Decimal(4, 2) // calculated average
+  comments         String?
+  submitted_at     DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+  buyer Buyer @relation(fields: [buyer_id], references: [id])
+
+  @@map("qa_surveys")
+}
+
+// ─── Commissions ─────────────────────────────────────────────────────────────
+
+model Commission {
+  id               String           @id @default(uuid())
+  agent_id         String
+  order_id         String           @unique
+  margin_amount    Decimal          @db.Decimal(12, 2)
+  commission_rate  Decimal          @db.Decimal(5, 2)
+  commission_earned Decimal         @db.Decimal(12, 2)
+  status           CommissionStatus @default(pending)
+  created_at       DateTime         @default(now())
+  paid_at          DateTime?
+
+  agent Agent @relation(fields: [agent_id], references: [id])
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@map("commissions")
+}
