@@ -51,7 +51,7 @@ const NEXT_STATUS: Record<string, { label: string; value: string }> = {
   dispatched: { label: "Mark Delivered", value: "delivered" },
 };
 
-function SubPOTimeline({ subpo, onStatusUpdate }: { subpo: SubPO; onStatusUpdate: () => void }) {
+function SubPOTimeline({ orderId, subpo, onStatusUpdate }: { orderId: string; subpo: SubPO; onStatusUpdate: () => void }) {
   const [updating, setUpdating] = useState(false);
   const currentIdx = SUBPO_STEPS.findIndex(s => s.key === subpo.status);
   const next = NEXT_STATUS[subpo.status];
@@ -59,7 +59,7 @@ function SubPOTimeline({ subpo, onStatusUpdate }: { subpo: SubPO; onStatusUpdate
   async function handleUpdate() {
     if (!next) return;
     setUpdating(true);
-    await fetch(`/api/agent/orders/${subpo.id.split("-")[0]}/subpos/${subpo.id}/status`, {
+    await fetch(`/api/agent/orders/${orderId}/subpos/${subpo.id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: next.value }),
@@ -109,22 +109,15 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/agent/orders/${id}`);
-    if (res.ok) setOrder(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/agent/orders/${id}`);
+      if (res.ok) setOrder(await res.json());
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Fix: pass orderId properly for status updates
-  async function handleSubPOStatus(subpoId: string, status: string) {
-    await fetch(`/api/agent/orders/${id}/subpos/${subpoId}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    load();
-  }
 
   if (loading) return <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>;
   if (!order) return <div className="text-center py-16 text-destructive">Order not found.</div>;
@@ -215,6 +208,7 @@ export default function OrderDetailPage() {
                     <span className="text-sm text-muted-foreground">· {subpo.supplier.name} ({subpo.supplier.country})</span>
                   </div>
                   <SubPOTimeline
+                    orderId={id}
                     subpo={subpo}
                     onStatusUpdate={load}
                   />

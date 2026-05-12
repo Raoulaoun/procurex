@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader } from "@/components/admin/page-header";
 import { CRUDModal } from "@/components/admin/crud-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Plus, Save, Trash2, Star } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 interface Product { id: string; name: string; unit: string; subcategory: { name: string; category: { name: string } } }
 interface SupplierProduct {
@@ -31,11 +30,6 @@ type RowEdit = { unit_price: string; currency: string; lead_time_days: string; m
 
 const TIERS = ["tier_1", "tier_2", "tier_3"];
 const TIER_LABELS: Record<string, string> = { tier_1: "Premium", tier_2: "Standard", tier_3: "Economy" };
-const STOCK_LABELS: Record<string, { label: string; variant: "success" | "warning" | "destructive" }> = {
-  ok: { label: "In Stock", variant: "success" },
-  low: { label: "Low Stock", variant: "warning" },
-  out: { label: "Out of Stock", variant: "destructive" },
-};
 
 const emptyForm = { product_id: "", unit_price: "", currency: "USD", lead_time_days: "7", moq: "1", quality_tier: "tier_2", stock_status: "ok" };
 

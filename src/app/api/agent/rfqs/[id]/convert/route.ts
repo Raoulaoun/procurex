@@ -143,7 +143,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
         supplierName: subpo.supplier.name,
         subpoRef: `PO-${subpo.id.slice(0, 8).toUpperCase()}`,
         orderRef: `ORD-${order.id.slice(0, 8).toUpperCase()}`,
-        lines: subpo.line_items.map((li, i) => ({
+        lines: subpo.line_items.map((li) => ({
           product_name: li.product.name,
           quantity: Number(li.quantity),
           unit: li.product.unit,

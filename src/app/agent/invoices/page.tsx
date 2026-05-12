@@ -28,8 +28,10 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     fetch("/api/agent/invoices")
-      .then(r => r.json())
-      .then(data => { setInvoices(data); setLoading(false); });
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(data => setInvoices(Array.isArray(data) ? data : []))
+      .catch(() => setInvoices([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (

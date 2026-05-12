@@ -36,8 +36,10 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetch("/api/agent/orders")
-      .then(r => r.json())
-      .then(data => { setOrders(data); setLoading(false); });
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then(data => setOrders(Array.isArray(data) ? data : []))
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
