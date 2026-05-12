@@ -10,6 +10,11 @@ const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
+  // ── Dev bypass: skip all auth when DEV_AUTH_BYPASS=true ──────────────────
+  if (process.env.DEV_AUTH_BYPASS === "true") {
+    return NextResponse.next({ request });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

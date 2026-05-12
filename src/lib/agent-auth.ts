@@ -5,6 +5,15 @@ import { NextResponse } from "next/server";
 const AGENT_ROLES = ["agent", "buyer_agent", "super_admin"];
 
 export async function requireAgent() {
+  // Dev bypass: return the first agent record without checking Supabase auth
+  if (process.env.DEV_AUTH_BYPASS === "true") {
+    const agent = await prisma.agent.findFirst();
+    if (!agent) {
+      return { error: NextResponse.json({ error: "No agent record found — create one in the DB first." }, { status: 500 }) };
+    }
+    return { user: { id: agent.user_id, user_metadata: { role: "super_admin" } }, agent };
+  }
+
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
