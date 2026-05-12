@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Check, Truck, Package, ClipboardCheck, PackageCheck } from "lucide-react";
+import { ArrowLeft, Check, Truck, Package, ClipboardCheck, PackageCheck, Star } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,8 @@ interface Order {
   rfq: { id: string; notes: string | null };
   subpos: SubPO[];
   commission: { commission_earned: string; commission_rate: string; status: string } | null;
+  survey_submitted: boolean;
+  survey_id: string | null;
 }
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -145,6 +147,18 @@ export default function OrderDetailPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">Created {formatDate(order.created_at)}</p>
+        </div>
+        <div className="flex gap-2">
+          {order.status === "delivered" && !order.survey_submitted && (
+            <Button size="sm" onClick={() => router.push(`/agent/surveys/new?order_id=${order.id}`)}>
+              <Star className="h-4 w-4 mr-1.5" /> Submit QA Survey
+            </Button>
+          )}
+          {order.status === "delivered" && order.survey_submitted && order.survey_id && (
+            <Button variant="outline" size="sm" onClick={() => router.push(`/agent/surveys/${order.survey_id}`)}>
+              <Star className="h-4 w-4 mr-1.5" /> View Survey
+            </Button>
+          )}
         </div>
       </div>
 

@@ -25,9 +25,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         orderBy: { created_at: "asc" },
       },
       commission: { select: { commission_earned: true, commission_rate: true, status: true } },
+      surveys: { select: { id: true } },
     },
   });
 
   if (!order) return err("Order not found", 404);
-  return ok(order);
+  return ok({ ...order, survey_submitted: order.surveys.length > 0, survey_id: order.surveys[0]?.id ?? null });
 }

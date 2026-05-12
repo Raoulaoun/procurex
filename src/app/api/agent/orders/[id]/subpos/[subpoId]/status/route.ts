@@ -52,5 +52,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   await prisma.order.update({ where: { id: orderId }, data: { status: newOrderStatus as never } });
 
-  return ok({ updated: true, order_status: newOrderStatus });
+  // Signal to frontend when order just became fully delivered (prompt for QA survey)
+  const survey_due = newOrderStatus === "delivered";
+
+  return ok({ updated: true, order_status: newOrderStatus, survey_due });
 }
