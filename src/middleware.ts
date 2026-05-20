@@ -10,8 +10,8 @@ const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
-  // ── Dev bypass: skip all auth when DEV_AUTH_BYPASS=true ──────────────────
-  if (process.env.DEV_AUTH_BYPASS === "true") {
+  // ── Dev bypass: skip all auth when NEXT_PUBLIC_DEV_AUTH_BYPASS=true ────────
+  if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true") {
     return NextResponse.next({ request });
   }
   // ─────────────────────────────────────────────────────────────────────────

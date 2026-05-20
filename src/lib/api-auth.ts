@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function requireAdmin() {
   // Dev bypass: skip auth entirely
-  if (process.env.DEV_AUTH_BYPASS === "true") {
+  if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true") {
     return { user: { id: "dev", user_metadata: { role: "super_admin" } } };
   }
 
