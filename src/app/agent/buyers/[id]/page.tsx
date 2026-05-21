@@ -94,7 +94,7 @@ export default function BuyerDetailPage() {
           </div>
         </div>
         <Link
-          href={`/agent/rfqs/new`}
+          href={`/agent/rfqs/new?buyer_id=${id}`}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
           style={{ backgroundColor: "#0d2144" }}
         >

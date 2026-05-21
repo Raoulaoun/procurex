@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { cn, formatCurrency, qualityTierLabel } from "@/lib/utils";
 import { ChevronRight, Search, Plus, Minus, Trash2, Check, ArrowLeft, Loader2 } from "lucide-react";
 
@@ -60,12 +61,13 @@ function StepIndicator({ step }: { step: number }) {
   );
 }
 
-export default function NewRFQPage() {
+function NewRFQForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
 
   const [buyers, setBuyers] = useState<Buyer[]>([]);
-  const [buyerId, setBuyerId] = useState("");
+  const [buyerId, setBuyerId] = useState(searchParams.get("buyer_id") ?? "");
   const [notes, setNotes] = useState("");
   const [rfqId, setRfqId] = useState<string | null>(null);
   const [creatingRfq, setCreatingRfq] = useState(false);
@@ -518,5 +520,17 @@ export default function NewRFQPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewRFQPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    }>
+      <NewRFQForm />
+    </Suspense>
   );
 }

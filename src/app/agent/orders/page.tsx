@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface Order {
@@ -61,8 +62,15 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Procurement Log</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track confirmed orders and their delivery status</p>
+          <p className="text-sm text-gray-500 mt-0.5">Orders are created when a client confirms a quote</p>
         </div>
+        <Link
+          href="/agent/rfqs/new"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+          style={{ backgroundColor: "#0d2144" }}
+        >
+          <FileText className="h-4 w-4" /> New Quote → Order
+        </Link>
       </div>
 
       {/* Total volume card + filters row */}
@@ -98,7 +106,14 @@ export default function OrdersPage() {
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center py-16 text-center">
           <p className="font-medium text-gray-700 mb-1">No orders found</p>
-          <p className="text-sm text-gray-400">Orders appear here when a buyer confirms a quotation.</p>
+          <p className="text-sm text-gray-400 mb-4">Create a quote, then convert it to an order once the client confirms.</p>
+          <Link
+            href="/agent/rfqs/new"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            style={{ backgroundColor: "#0d2144" }}
+          >
+            <FileText className="h-4 w-4" /> Create a Quote
+          </Link>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
