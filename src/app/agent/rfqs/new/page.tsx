@@ -2,17 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { cn, formatCurrency, qualityTierLabel } from "@/lib/utils";
 import { ChevronRight, Search, Plus, Minus, Trash2, Check, ArrowLeft, Loader2 } from "lucide-react";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Buyer { id: string; name: string; company: string }
 interface Category { id: string; name: string; name_ar: string; subcategories: { id: string; name: string; name_ar: string }[] }
@@ -30,13 +21,11 @@ interface LineItem {
   loading_options: boolean;
 }
 
-const STOCK_LABELS: Record<string, { label: string; class: string }> = {
-  ok: { label: "In Stock", class: "text-green-600" },
-  low: { label: "Low Stock", class: "text-yellow-600" },
-  out: { label: "Out of Stock", class: "text-red-500" },
+const STOCK_LABELS: Record<string, { label: string; color: string }> = {
+  ok:  { label: "In Stock", color: "#059669" },
+  low: { label: "Low Stock", color: "#d97706" },
+  out: { label: "Out of Stock", color: "#dc2626" },
 };
-
-// ─── Step indicator ──────────────────────────────────────────────────────────
 
 function StepIndicator({ step }: { step: number }) {
   const steps = ["Buyer & Details", "Select Products", "Review & Confirm"];
@@ -48,17 +37,22 @@ function StepIndicator({ step }: { step: number }) {
         const active = step === n;
         return (
           <div key={n} className="flex items-center">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className={cn(
                 "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
-                done ? "bg-primary border-primary text-primary-foreground" :
-                active ? "border-primary text-primary" : "border-muted-foreground/30 text-muted-foreground"
-              )}>
+              )}
+                style={done
+                  ? { backgroundColor: "#0d2144", borderColor: "#0d2144", color: "#fff" }
+                  : active
+                  ? { backgroundColor: "#fff", borderColor: "#0d2144", color: "#0d2144" }
+                  : { backgroundColor: "#fff", borderColor: "#d1d5db", color: "#9ca3af" }
+                }
+              >
                 {done ? <Check className="h-3.5 w-3.5" /> : n}
               </div>
-              <span className={cn("text-sm", active ? "font-medium" : "text-muted-foreground")}>{label}</span>
+              <span className="text-sm font-medium" style={{ color: active ? "#0d2144" : "#9ca3af" }}>{label}</span>
             </div>
-            {i < steps.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground/40 mx-3" />}
+            {i < steps.length - 1 && <ChevronRight className="h-4 w-4 text-gray-300 mx-3" />}
           </div>
         );
       })}
@@ -66,20 +60,16 @@ function StepIndicator({ step }: { step: number }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function NewRFQPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
 
-  // Step 1 state
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [buyerId, setBuyerId] = useState("");
   const [notes, setNotes] = useState("");
   const [rfqId, setRfqId] = useState<string | null>(null);
   const [creatingRfq, setCreatingRfq] = useState(false);
 
-  // Step 2 state
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCat, setSelectedCat] = useState<Category | null>(null);
   const [selectedSub, setSelectedSub] = useState<string>("");
@@ -89,11 +79,9 @@ export default function NewRFQPage() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
 
-  // Step 3 state
   const [saving, setSaving] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
-  // Load buyers and categories on mount
   useEffect(() => {
     Promise.all([
       fetch("/api/agent/buyers").then(r => r.json()),
@@ -101,7 +89,6 @@ export default function NewRFQPage() {
     ]).then(([b, c]) => { setBuyers(b); setCategories(c); });
   }, []);
 
-  // ── Step 1: create RFQ ──────────────────────────────────────────────────────
   async function handleStep1Next() {
     if (!buyerId) return;
     setCreatingRfq(true);
@@ -115,7 +102,6 @@ export default function NewRFQPage() {
     setStep(2);
   }
 
-  // ── Step 2: product search ──────────────────────────────────────────────────
   async function loadProducts(subId?: string, q?: string) {
     setSearching(true);
     const params = new URLSearchParams();
@@ -126,56 +112,33 @@ export default function NewRFQPage() {
     setSearching(false);
   }
 
-  function handleCatSelect(cat: Category) {
-    setSelectedCat(cat);
-    setSelectedSub("");
-    setProducts([]);
-  }
-
-  function handleSubSelect(subId: string) {
-    setSelectedSub(subId);
-    loadProducts(subId);
-  }
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (search.trim()) loadProducts(undefined, search.trim());
-  }
+  function handleCatSelect(cat: Category) { setSelectedCat(cat); setSelectedSub(""); setProducts([]); }
+  function handleSubSelect(subId: string) { setSelectedSub(subId); loadProducts(subId); }
+  function handleSearch(e: React.FormEvent) { e.preventDefault(); if (search.trim()) loadProducts(undefined, search.trim()); }
 
   const addedIds = new Set(lineItems.map(li => li.product_id));
 
   function addProduct(p: Product) {
     if (addedIds.has(p.id)) return;
-    const catId = selectedCat?.id ??
-      categories.find(c => c.subcategories.some(s => s.id === p.subcategory.id))?.id ?? "";
+    const catId = selectedCat?.id ?? categories.find(c => c.subcategories.some(s => s.id === p.subcategory.id))?.id ?? "";
     setLineItems(prev => [...prev, {
       product_id: p.id, product_name: p.name, product_name_ar: p.name_ar,
-      product_unit: p.unit, category_id: catId,
-      quantity: 1, options: [], selected_option: null, loading_options: false,
+      product_unit: p.unit, category_id: catId, quantity: 1, options: [], selected_option: null, loading_options: false,
     }]);
     setQuantities(prev => ({ ...prev, [p.id]: "1" }));
   }
 
-  function removeLineItem(productId: string) {
-    setLineItems(prev => prev.filter(li => li.product_id !== productId));
-  }
+  function removeLineItem(productId: string) { setLineItems(prev => prev.filter(li => li.product_id !== productId)); }
 
   function setQty(productId: string, val: string) {
     setQuantities(prev => ({ ...prev, [productId]: val }));
-    setLineItems(prev => prev.map(li =>
-      li.product_id === productId ? { ...li, quantity: Number(val) || 1 } : li
-    ));
+    setLineItems(prev => prev.map(li => li.product_id === productId ? { ...li, quantity: Number(val) || 1 } : li));
   }
 
-  // ── Step 3: fetch quotation options ─────────────────────────────────────────
   const fetchOptions = useCallback(async () => {
     const updated = await Promise.all(
       lineItems.map(async (li) => {
-        const params = new URLSearchParams({
-          product_id: li.product_id,
-          category_id: li.category_id,
-          quantity: String(li.quantity),
-        });
+        const params = new URLSearchParams({ product_id: li.product_id, category_id: li.category_id, quantity: String(li.quantity) });
         const res = await fetch(`/api/agent/quotation-options?${params}`);
         const data = await res.json();
         return { ...li, options: data.options ?? [], loading_options: false };
@@ -186,23 +149,17 @@ export default function NewRFQPage() {
 
   async function handleStep2Next() {
     if (lineItems.length === 0) return;
-    // Update quantities on line items then fetch options
     setLineItems(prev => prev.map(li => ({ ...li, loading_options: true })));
     setStep(3);
-    // Trigger option fetching after state update
   }
 
   useEffect(() => {
-    if (step === 3 && lineItems.some(li => li.loading_options)) {
-      fetchOptions();
-    }
+    if (step === 3 && lineItems.some(li => li.loading_options)) fetchOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   function selectOption(productId: string, option: QuotationOption) {
-    setLineItems(prev => prev.map(li =>
-      li.product_id === productId ? { ...li, selected_option: option } : li
-    ));
+    setLineItems(prev => prev.map(li => li.product_id === productId ? { ...li, selected_option: option } : li));
   }
 
   function applyTierToAll(tier: string) {
@@ -212,24 +169,15 @@ export default function NewRFQPage() {
     }));
   }
 
-  // ── Confirm RFQ ─────────────────────────────────────────────────────────────
   async function handleConfirm() {
     if (!rfqId) return;
     setSaving(true);
-
-    // Save all line items with selections
     for (const li of lineItems) {
       await fetch(`/api/agent/rfqs/${rfqId}/line-items`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: li.product_id,
-          quantity: li.quantity,
-          selected_supplier_product_id: li.selected_option?.supplier_product_id ?? null,
-        }),
+        body: JSON.stringify({ product_id: li.product_id, quantity: li.quantity, selected_supplier_product_id: li.selected_option?.supplier_product_id ?? null }),
       });
     }
-
-    // Mark as sent
     await fetch(`/api/agent/rfqs/${rfqId}/confirm`, { method: "POST" });
     setSaving(false);
     setConfirmed(true);
@@ -238,23 +186,30 @@ export default function NewRFQPage() {
   const allSelected = lineItems.length > 0 && lineItems.every(li => li.selected_option !== null);
   const grandTotal = lineItems.reduce((s, li) => s + (li.selected_option?.line_total ?? 0), 0);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   if (confirmed && rfqId) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
-        <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-          <Check className="h-7 w-7 text-green-600" />
+        <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+          <Check className="h-7 w-7 text-emerald-600" />
         </div>
-        <h2 className="text-xl font-bold mb-2">Quotation Ready</h2>
-        <p className="text-muted-foreground mb-6">
-          Reference <span className="font-mono font-medium">QUO-{rfqId.slice(0, 8).toUpperCase()}</span> has been confirmed.
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Quotation Ready</h2>
+        <p className="text-gray-500 mb-6">
+          Reference <span className="font-mono font-medium text-gray-700">QUO-{rfqId.slice(0, 8).toUpperCase()}</span> has been confirmed.
         </p>
         <div className="flex gap-3 justify-center">
-          <Button variant="outline" onClick={() => window.open(`/api/agent/rfqs/${rfqId}/pdf`, "_blank")}>
+          <button
+            onClick={() => window.open(`/api/agent/rfqs/${rfqId}/pdf`, "_blank")}
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
             Download PDF
-          </Button>
-          <Button onClick={() => router.push("/agent/rfqs")}>Back to RFQs</Button>
+          </button>
+          <button
+            onClick={() => router.push("/agent/rfqs")}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            style={{ backgroundColor: "#0d2144" }}
+          >
+            Back to Quotes
+          </button>
         </div>
       </div>
     );
@@ -262,63 +217,86 @@ export default function NewRFQPage() {
 
   return (
     <div>
-      <button onClick={() => step > 1 ? setStep(s => s - 1) : router.push("/agent/rfqs")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> {step > 1 ? "Back" : "My RFQs"}
+      <button onClick={() => step > 1 ? setStep(s => s - 1) : router.push("/agent/rfqs")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
+        <ArrowLeft className="h-4 w-4" /> {step > 1 ? "Back" : "Quotes"}
       </button>
 
-      <h1 className="text-2xl font-bold mb-6">New RFQ</h1>
+      <h1 className="text-xl font-bold text-gray-900 mb-6">New Quote</h1>
       <StepIndicator step={step} />
 
-      {/* ── Step 1 ──────────────────────────────────────────────────────────── */}
+      {/* Step 1 */}
       {step === 1 && (
-        <Card className="max-w-lg">
-          <CardHeader><CardTitle className="text-base">Select Buyer & Details</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 max-w-lg">
+          <h2 className="font-semibold text-gray-900 mb-4">Select Client & Details</h2>
+          <div className="space-y-4">
             <div>
-              <Label>Buyer</Label>
-              <Select value={buyerId} onValueChange={setBuyerId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select a buyer" /></SelectTrigger>
-                <SelectContent>
-                  {buyers.map(b => (
-                    <SelectItem key={b.id} value={b.id}>{b.name} — {b.company}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {buyers.length === 0 && <p className="text-xs text-muted-foreground mt-1">No buyers assigned to you yet. Ask an admin.</p>}
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Client</label>
+              <select
+                value={buyerId}
+                onChange={e => setBuyerId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
+              >
+                <option value="">Select a client…</option>
+                {buyers.map(b => (
+                  <option key={b.id} value={b.id}>{b.name} — {b.company}</option>
+                ))}
+              </select>
+              {buyers.length === 0 && <p className="text-xs text-gray-400 mt-1">No buyers assigned. Ask an admin.</p>}
             </div>
             <div>
-              <Label>Notes (optional)</Label>
-              <Input className="mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any special requirements or context…" />
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Notes (optional)</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Any special requirements or context…"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
+              />
             </div>
-            <Button className="w-full" onClick={handleStep1Next} disabled={!buyerId || creatingRfq}>
-              {creatingRfq ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating…</> : <>Continue <ChevronRight className="h-4 w-4 ml-1" /></>}
-            </Button>
-          </CardContent>
-        </Card>
+            <button
+              onClick={handleStep1Next}
+              disabled={!buyerId || creatingRfq}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+              style={{ backgroundColor: "#0d2144" }}
+            >
+              {creatingRfq ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</> : <>Continue <ChevronRight className="h-4 w-4" /></>}
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* ── Step 2 ──────────────────────────────────────────────────────────── */}
+      {/* Step 2 */}
       {step === 2 && (
         <div className="grid grid-cols-3 gap-6">
-          {/* Left: browser + search */}
           <div className="col-span-2 space-y-4">
-            {/* Search */}
             <form onSubmit={handleSearch} className="flex gap-2">
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…" className="flex-1" />
-              <Button type="submit" variant="outline" size="icon"><Search className="h-4 w-4" /></Button>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search products…"
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-colors"
+                />
+              </div>
+              <button type="submit" className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+                <Search className="h-4 w-4" />
+              </button>
             </form>
 
-            {/* Category navigation */}
             <div className="flex gap-3">
               <div className="w-44 shrink-0">
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Categories</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Categories</p>
                 <div className="space-y-0.5">
                   {categories.map(cat => (
                     <button
                       key={cat.id}
                       onClick={() => handleCatSelect(cat)}
-                      className={cn("w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors",
-                        selectedCat?.id === cat.id ? "bg-accent font-medium" : "hover:bg-accent/50 text-muted-foreground")}
+                      className="w-full text-left px-2.5 py-2 text-sm rounded-lg transition-colors"
+                      style={selectedCat?.id === cat.id
+                        ? { backgroundColor: "#0d2144", color: "#fff" }
+                        : { color: "#6b7280" }
+                      }
                     >
                       {cat.name}
                     </button>
@@ -328,14 +306,17 @@ export default function NewRFQPage() {
 
               {selectedCat && (
                 <div className="w-44 shrink-0">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Subcategories</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Subcategories</p>
                   <div className="space-y-0.5">
                     {selectedCat.subcategories.map(sub => (
                       <button
                         key={sub.id}
                         onClick={() => handleSubSelect(sub.id)}
-                        className={cn("w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors",
-                          selectedSub === sub.id ? "bg-accent font-medium" : "hover:bg-accent/50 text-muted-foreground")}
+                        className="w-full text-left px-2.5 py-2 text-sm rounded-lg transition-colors"
+                        style={selectedSub === sub.id
+                          ? { backgroundColor: "#e8f0ff", color: "#1e4db7" }
+                          : { color: "#6b7280" }
+                        }
                       >
                         {sub.name}
                       </button>
@@ -344,32 +325,38 @@ export default function NewRFQPage() {
                 </div>
               )}
 
-              {/* Product list */}
               <div className="flex-1">
                 {searching ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">Loading…</div>
+                  <div className="text-center py-8 text-gray-400 text-sm">Loading…</div>
                 ) : products.length > 0 ? (
                   <div className="space-y-1">
                     {products.map(p => {
                       const added = addedIds.has(p.id);
                       return (
-                        <div key={p.id} className={cn("flex items-center justify-between px-3 py-2 rounded-lg border text-sm transition-colors", added ? "bg-accent/30 border-accent" : "hover:bg-muted/50")}>
+                        <div key={p.id} className={cn(
+                          "flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors",
+                          added ? "bg-blue-50 border-blue-200" : "bg-white border-gray-200 hover:bg-gray-50"
+                        )}>
                           <div>
-                            <span className="font-medium">{p.name}</span>
-                            <span className="text-muted-foreground ml-2 text-xs">/ {p.unit}</span>
-                            {p.name_ar && <div className="text-xs text-muted-foreground" dir="rtl">{p.name_ar}</div>}
+                            <span className="font-medium text-gray-900">{p.name}</span>
+                            <span className="text-gray-400 ml-2 text-xs">/ {p.unit}</span>
                           </div>
-                          <Button size="sm" variant={added ? "secondary" : "outline"} onClick={() => addProduct(p)} disabled={added} className="h-7 text-xs">
-                            {added ? <><Check className="h-3 w-3 mr-1" /> Added</> : <><Plus className="h-3 w-3 mr-1" /> Add</>}
-                          </Button>
+                          <button
+                            onClick={() => addProduct(p)}
+                            disabled={added}
+                            className="px-3 py-1 rounded-lg text-xs font-medium border transition-colors disabled:opacity-60"
+                            style={added ? { backgroundColor: "#d1fae5", color: "#065f46", borderColor: "#6ee7b7" } : { borderColor: "#e5e7eb", color: "#374151" }}
+                          >
+                            {added ? <><Check className="h-3 w-3 inline mr-1" />Added</> : <><Plus className="h-3 w-3 inline mr-1" />Add</>}
+                          </button>
                         </div>
                       );
                     })}
                   </div>
                 ) : selectedSub || search ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">No products found.</div>
+                  <div className="text-center py-8 text-gray-400 text-sm">No products found.</div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground text-sm">Select a subcategory or search to browse products.</div>
+                  <div className="text-center py-8 text-gray-400 text-sm">Select a subcategory or search to browse products.</div>
                 )}
               </div>
             </div>
@@ -377,124 +364,155 @@ export default function NewRFQPage() {
 
           {/* Right: selected items */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold">Selected ({lineItems.length})</p>
-            </div>
+            <p className="text-sm font-semibold text-gray-900 mb-3">Selected ({lineItems.length})</p>
             {lineItems.length === 0 ? (
-              <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">No products added yet.</div>
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center text-sm text-gray-400">
+                No products added yet
+              </div>
             ) : (
               <div className="space-y-2">
                 {lineItems.map(li => (
-                  <div key={li.product_id} className="border rounded-lg p-3">
+                  <div key={li.product_id} className="bg-white border border-gray-200 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-medium leading-tight">{li.product_name}</span>
-                      <button onClick={() => removeLineItem(li.product_id)} className="text-muted-foreground hover:text-destructive shrink-0">
+                      <span className="text-sm font-medium text-gray-900 leading-tight">{li.product_name}</span>
+                      <button onClick={() => removeLineItem(li.product_id)} className="text-gray-300 hover:text-red-500 shrink-0 transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setQty(li.product_id, String(Math.max(1, li.quantity - 1)))} className="h-6 w-6 rounded border flex items-center justify-center hover:bg-muted"><Minus className="h-3 w-3" /></button>
-                      <Input
+                      <button onClick={() => setQty(li.product_id, String(Math.max(1, li.quantity - 1)))} className="h-6 w-6 rounded border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                        <Minus className="h-3 w-3 text-gray-500" />
+                      </button>
+                      <input
                         type="number" min="1" value={quantities[li.product_id] ?? "1"}
                         onChange={e => setQty(li.product_id, e.target.value)}
-                        className="h-6 text-center text-xs w-16 px-1"
+                        className="h-6 text-center text-xs w-14 border border-gray-200 rounded px-1 outline-none"
                       />
-                      <button onClick={() => setQty(li.product_id, String(li.quantity + 1))} className="h-6 w-6 rounded border flex items-center justify-center hover:bg-muted"><Plus className="h-3 w-3" /></button>
-                      <span className="text-xs text-muted-foreground ml-1">{li.product_unit}</span>
+                      <button onClick={() => setQty(li.product_id, String(li.quantity + 1))} className="h-6 w-6 rounded border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                        <Plus className="h-3 w-3 text-gray-500" />
+                      </button>
+                      <span className="text-xs text-gray-400 ml-1">{li.product_unit}</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <Button className="w-full mt-4" onClick={handleStep2Next} disabled={lineItems.length === 0}>
-              Get Quotes <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+            <button
+              onClick={handleStep2Next}
+              disabled={lineItems.length === 0}
+              className="w-full mt-4 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+              style={{ backgroundColor: "#0d2144" }}
+            >
+              Get Quotes <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}
 
-      {/* ── Step 3 ──────────────────────────────────────────────────────────── */}
+      {/* Step 3 */}
       {step === 3 && (
         <div>
-          {/* Apply tier to all */}
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-sm text-muted-foreground">Apply tier to all:</span>
+            <span className="text-sm text-gray-500">Apply tier to all:</span>
             {["tier_1", "tier_2", "tier_3"].map(tier => (
-              <Button key={tier} variant="outline" size="sm" onClick={() => applyTierToAll(tier)}>
+              <button
+                key={tier}
+                onClick={() => applyTierToAll(tier)}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
                 {qualityTierLabel(tier)}
-              </Button>
+              </button>
             ))}
           </div>
 
           <div className="space-y-4">
             {lineItems.map(li => (
-              <Card key={li.product_id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-semibold">{li.product_name}</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-0.5">Qty: {li.quantity} {li.product_unit}</p>
-                    </div>
-                    {li.selected_option && (
-                      <Badge variant="success">
-                        Selected — {formatCurrency(li.selected_option.line_total, li.selected_option.currency)}
-                      </Badge>
-                    )}
+              <div key={li.product_id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{li.product_name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Qty: {li.quantity} {li.product_unit}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
+                  {li.selected_option && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                      Selected — {formatCurrency(li.selected_option.line_total, li.selected_option.currency)}
+                    </span>
+                  )}
+                </div>
+                <div className="p-5">
                   {li.loading_options ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
                       <Loader2 className="h-4 w-4 animate-spin" /> Fetching options…
                     </div>
                   ) : li.options.length === 0 ? (
-                    <p className="text-sm text-destructive">No suppliers available for this product at qty {li.quantity}.</p>
+                    <p className="text-sm text-red-500">No suppliers available for this product at qty {li.quantity}.</p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {li.options.map(opt => {
                         const isSelected = li.selected_option?.supplier_product_id === opt.supplier_product_id;
-                        const stockInfo = STOCK_LABELS[opt.stock_status];
+                        const stock = STOCK_LABELS[opt.stock_status];
                         return (
                           <button
                             key={opt.supplier_product_id}
                             onClick={() => selectOption(li.product_id, opt)}
-                            className={cn(
-                              "text-left p-3 rounded-lg border-2 transition-all hover:shadow-sm",
-                              isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                            )}
+                            className="text-left p-3 rounded-xl border-2 transition-all hover:shadow-sm"
+                            style={isSelected
+                              ? { borderColor: "#1e4db7", backgroundColor: "#f0f4ff" }
+                              : { borderColor: "#e5e7eb" }
+                            }
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <Badge variant={opt.quality_tier === "tier_1" ? "default" : opt.quality_tier === "tier_2" ? "secondary" : "outline"} className="text-[10px] px-1.5">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                style={opt.quality_tier === "tier_1"
+                                  ? { backgroundColor: "#0d2144", color: "#fff" }
+                                  : opt.quality_tier === "tier_2"
+                                  ? { backgroundColor: "#e8f0ff", color: "#1e4db7" }
+                                  : { backgroundColor: "#f3f4f6", color: "#374151" }
+                                }>
                                 {qualityTierLabel(opt.quality_tier)}
-                              </Badge>
-                              {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
+                              </span>
+                              {isSelected && <Check className="h-3.5 w-3.5 text-blue-600" />}
                             </div>
-                            <p className="text-base font-bold mt-2">{formatCurrency(opt.buyer_unit_price, opt.currency)}<span className="text-xs font-normal text-muted-foreground"> / {li.product_unit}</span></p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Total: {formatCurrency(opt.line_total, opt.currency)}</p>
-                            <Separator className="my-2" />
-                            <p className="text-xs text-muted-foreground">Lead: {opt.lead_time_days} days · MOQ: {opt.moq}</p>
-                            <p className={cn("text-xs font-medium mt-0.5", stockInfo?.class)}>{stockInfo?.label}</p>
+                            <p className="text-base font-bold text-gray-900 mt-2">
+                              {formatCurrency(opt.buyer_unit_price, opt.currency)}
+                              <span className="text-xs font-normal text-gray-400"> / {li.product_unit}</span>
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5">Total: {formatCurrency(opt.line_total, opt.currency)}</p>
+                            <div className="border-t border-gray-100 mt-2 pt-2">
+                              <p className="text-xs text-gray-400">Lead: {opt.lead_time_days} days · MOQ: {opt.moq}</p>
+                              <p className="text-xs font-medium mt-0.5" style={{ color: stock?.color }}>{stock?.label}</p>
+                            </div>
                           </button>
                         );
                       })}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
 
-          {/* Footer total + confirm */}
-          <div className="mt-6 flex items-center justify-between p-4 bg-card border rounded-lg">
+          {/* Footer */}
+          <div className="mt-6 flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
             <div>
-              <p className="text-sm text-muted-foreground">Estimated total</p>
-              <p className="text-xl font-bold">{allSelected ? formatCurrency(grandTotal, lineItems[0]?.selected_option?.currency ?? "USD") : "—"}</p>
+              <p className="text-xs text-gray-500">Estimated total</p>
+              <p className="text-xl font-bold text-gray-900">{allSelected ? formatCurrency(grandTotal, lineItems[0]?.selected_option?.currency ?? "USD") : "—"}</p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setStep(2)}>Edit Products</Button>
-              <Button onClick={handleConfirm} disabled={!allSelected || saving}>
-                {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : "Confirm & Generate Quote"}
-              </Button>
+              <button
+                onClick={() => setStep(2)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Edit Products
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!allSelected || saving}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+                style={{ backgroundColor: "#0d2144" }}
+              >
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Confirm & Generate Quote"}
+              </button>
             </div>
           </div>
         </div>

@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, ShoppingCart, Loader2, Mail, Phone } from "lucide-react";
 import { formatCurrency, formatDate, qualityTierLabel } from "@/lib/utils";
 
 interface LineItem {
@@ -21,8 +16,11 @@ interface RFQ {
   line_items: LineItem[];
 }
 
-const STATUS_VARIANTS: Record<string, "secondary" | "warning" | "success" | "destructive"> = {
-  draft: "secondary", sent: "warning", confirmed: "success", cancelled: "destructive",
+const STATUS: Record<string, { bg: string; text: string; label: string }> = {
+  draft:     { bg: "#f3f4f6", text: "#374151", label: "Draft" },
+  sent:      { bg: "#fef3c7", text: "#b45309", label: "Sent" },
+  confirmed: { bg: "#d1fae5", text: "#065f46", label: "Confirmed" },
+  cancelled: { bg: "#fee2e2", text: "#b91c1c", label: "Cancelled" },
 };
 
 export default function RFQDetailPage() {
@@ -48,118 +46,177 @@ export default function RFQDetailPage() {
     else alert(data.error ?? "Failed to convert");
   }
 
-  if (loading) return <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>;
-  if (!rfq) return <div className="text-center py-16 text-destructive">RFQ not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
+  if (!rfq) return <div className="text-center py-16 text-red-500">Quote not found.</div>;
 
   const total = rfq.line_items.reduce((s, li) =>
     s + (Number(li.buyer_unit_price ?? 0) * Number(li.quantity)), 0
   );
+  const currency = rfq.line_items[0]?.selected_supplier_product?.currency ?? "USD";
+  const statusInfo = STATUS[rfq.status] ?? { bg: "#f3f4f6", text: "#374151", label: rfq.status };
 
   return (
     <div>
-      <button onClick={() => router.push("/agent/rfqs")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Back to RFQs
+      {/* Breadcrumb */}
+      <button onClick={() => router.push("/agent/rfqs")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Quotes
       </button>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-mono">QUO-{rfq.id.slice(0, 8).toUpperCase()}</h1>
-            <Badge variant={STATUS_VARIANTS[rfq.status] ?? "secondary"}>{rfq.status}</Badge>
+            <h1 className="text-xl font-bold text-gray-900 font-mono">QUO-{rfq.id.slice(0, 8).toUpperCase()}</h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              style={{ backgroundColor: statusInfo.bg, color: statusInfo.text }}>
+              {statusInfo.label}
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">Created {formatDate(rfq.created_at)}</p>
-        </div>
-        <div className="flex gap-2">
-          {(rfq.status === "sent" || rfq.status === "confirmed") && (
-            <Button variant="outline" size="sm" onClick={() => window.open(`/api/agent/rfqs/${id}/pdf`, "_blank")}>
-              <Download className="h-4 w-4 mr-1.5" /> Download PDF
-            </Button>
-          )}
-          {rfq.status === "sent" && (
-            <Button size="sm" onClick={handleConvertToOrder} disabled={converting}>
-              {converting
-                ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Converting…</>
-                : <><ShoppingCart className="h-4 w-4 mr-1.5" /> Buyer Confirmed — Create Order</>}
-            </Button>
-          )}
+          <p className="text-sm text-gray-400 mt-0.5">Created {formatDate(rfq.created_at)}</p>
         </div>
       </div>
 
-      {/* Parties */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">Buyer</CardTitle></CardHeader>
-          <CardContent>
-            <p className="font-semibold">{rfq.buyer.name}</p>
-            <p className="text-sm text-muted-foreground">{rfq.buyer.company}</p>
-            <p className="text-sm text-muted-foreground">{rfq.buyer.email}</p>
-            {rfq.buyer.address && <p className="text-sm text-muted-foreground">{rfq.buyer.address}</p>}
-          </CardContent>
-        </Card>
-        {rfq.notes && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">Notes</CardTitle></CardHeader>
-            <CardContent><p className="text-sm">{rfq.notes}</p></CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Line items */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900 text-sm">Line Items</h2>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Product</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tier</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qty</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit Price</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {rfq.line_items.map((li, i) => {
+                  const unitPrice = Number(li.buyer_unit_price ?? 0);
+                  const qty = Number(li.quantity);
+                  return (
+                    <tr key={li.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900">{li.product.name}</p>
+                        <p className="text-xs text-gray-400">{li.product.subcategory.category.name} / {li.product.subcategory.name}</p>
+                        {li.product.name_ar && <p className="text-xs text-gray-400" dir="rtl">{li.product.name_ar}</p>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {li.selected_supplier_product ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                            {qualityTierLabel(li.selected_supplier_product.quality_tier)}
+                          </span>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{li.product.unit}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">{qty.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {li.buyer_unit_price ? formatCurrency(unitPrice, currency) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                        {li.buyer_unit_price ? formatCurrency(unitPrice * qty, currency) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-      <Separator className="mb-6" />
+            {/* Total row */}
+            <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <div className="text-right">
+                <p className="text-xs text-gray-500 mb-1">Total</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(total, currency)}</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Line items */}
-      <h2 className="font-semibold mb-3">Line Items</h2>
-      <div className="rounded-lg border overflow-hidden mb-6">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Unit Price</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rfq.line_items.map((li, i) => {
-              const unitPrice = Number(li.buyer_unit_price ?? 0);
-              const qty = Number(li.quantity);
-              const lineTotal = unitPrice * qty;
-              const currency = li.selected_supplier_product?.currency ?? "USD";
-              return (
-                <TableRow key={li.id}>
-                  <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                  <TableCell>
-                    <div className="font-medium">{li.product.name}</div>
-                    {li.product.name_ar && <div className="text-xs text-muted-foreground" dir="rtl">{li.product.name_ar}</div>}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{li.product.subcategory.category.name} / {li.product.subcategory.name}</TableCell>
-                  <TableCell>
-                    {li.selected_supplier_product ? (
-                      <Badge variant="outline">{qualityTierLabel(li.selected_supplier_product.quality_tier)}</Badge>
-                    ) : <span className="text-muted-foreground text-xs">—</span>}
-                  </TableCell>
-                  <TableCell>{li.product.unit}</TableCell>
-                  <TableCell className="text-right">{qty.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{li.buyer_unit_price ? formatCurrency(unitPrice, currency) : "—"}</TableCell>
-                  <TableCell className="text-right font-medium">{li.buyer_unit_price ? formatCurrency(lineTotal, currency) : "—"}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+          {/* Notes */}
+          {rfq.notes && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mt-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Notes</p>
+              <p className="text-sm text-gray-600">{rfq.notes}</p>
+            </div>
+          )}
+        </div>
 
-      {/* Total */}
-      <div className="flex justify-end">
-        <div className="w-56 space-y-2">
-          <Separator />
-          <div className="flex justify-between font-bold text-lg pt-1">
-            <span>Total</span>
-            <span>{formatCurrency(total, rfq.line_items[0]?.selected_supplier_product?.currency ?? "USD")}</span>
+        {/* Right: Sidebar */}
+        <div className="space-y-4">
+          {/* Next Steps */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Next Steps</h3>
+            <div className="space-y-2">
+              {rfq.status === "sent" && (
+                <button
+                  onClick={handleConvertToOrder}
+                  disabled={converting}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+                  style={{ backgroundColor: "#0d2144" }}
+                >
+                  {converting
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Converting…</>
+                    : <><ShoppingCart className="h-4 w-4" /> Convert to Order</>
+                  }
+                </button>
+              )}
+              {(rfq.status === "sent" || rfq.status === "confirmed") && (
+                <button
+                  onClick={() => window.open(`/api/agent/rfqs/${id}/pdf`, "_blank")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Download PDF
+                </button>
+              )}
+              {rfq.status === "draft" && (
+                <div className="text-xs text-gray-400 text-center py-2">
+                  This quote is in draft mode.
+                </div>
+              )}
+              {rfq.status === "confirmed" && (
+                <div className="text-xs text-emerald-600 text-center py-2 font-medium">
+                  ✓ Quote confirmed and converted to order
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Client Contact */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Client Contact</h3>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ backgroundColor: "#0d2144" }}>
+                {rfq.buyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">{rfq.buyer.name}</p>
+                <p className="text-xs text-gray-400">{rfq.buyer.company}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Mail className="h-3.5 w-3.5 text-gray-400" />
+                <a href={`mailto:${rfq.buyer.email}`} className="hover:text-blue-600 transition-colors">{rfq.buyer.email}</a>
+              </div>
+              {rfq.buyer.address && (
+                <div className="flex items-start gap-2 text-xs text-gray-500">
+                  <Phone className="h-3.5 w-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <span>{rfq.buyer.address}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

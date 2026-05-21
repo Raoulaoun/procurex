@@ -2,14 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Download, Send, CheckCircle, Loader2 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 interface InvoiceLine {
   number: number; product_name: string; product_unit: string;
@@ -26,16 +20,10 @@ interface Invoice {
   lines: InvoiceLine[];
 }
 
-const STATUS_VARIANTS: Record<string, "secondary" | "warning" | "success"> = {
-  draft: "secondary", sent: "warning", paid: "success",
-};
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft", sent: "Sent", paid: "Paid",
-};
-
-const NEXT_ACTION: Record<string, { label: string; value: string; icon: React.ReactNode }> = {
-  draft: { label: "Send Invoice", value: "sent", icon: <Send className="h-4 w-4 mr-1.5" /> },
-  sent: { label: "Mark as Paid", value: "paid", icon: <CheckCircle className="h-4 w-4 mr-1.5" /> },
+const STATUS: Record<string, { bg: string; text: string; label: string }> = {
+  draft: { bg: "#f3f4f6", text: "#374151", label: "Draft" },
+  sent:  { bg: "#dbeafe", text: "#1d4ed8", label: "Sent" },
+  paid:  { bg: "#d1fae5", text: "#065f46", label: "Paid" },
 };
 
 export default function InvoiceDetailPage() {
@@ -64,128 +52,152 @@ export default function InvoiceDetailPage() {
     load();
   }
 
-  if (loading) return <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>;
-  if (!invoice) return <div className="text-center py-16 text-destructive">Invoice not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
+  if (!invoice) return <div className="text-center py-16 text-red-500">Invoice not found.</div>;
 
-  const nextAction = NEXT_ACTION[invoice.status];
+  const statusInfo = STATUS[invoice.status] ?? { bg: "#f3f4f6", text: "#374151", label: invoice.status };
   const isOverdue = invoice.status === "sent" && new Date(invoice.due_at) < new Date();
+  const nextAction = invoice.status === "draft"
+    ? { label: "Send Invoice", value: "sent", icon: <Send className="h-4 w-4" /> }
+    : invoice.status === "sent"
+    ? { label: "Mark as Paid", value: "paid", icon: <CheckCircle className="h-4 w-4" /> }
+    : null;
 
   return (
     <div>
-      <button onClick={() => router.push("/agent/invoices")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Back to Invoices
+      {/* Breadcrumb */}
+      <button onClick={() => router.push("/agent/invoices")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Invoices
       </button>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-mono">INV-{invoice.id.slice(0, 8).toUpperCase()}</h1>
-            <Badge variant={STATUS_VARIANTS[invoice.status] ?? "secondary"}>
-              {STATUS_LABELS[invoice.status] ?? invoice.status}
-            </Badge>
+            <h1 className="text-xl font-bold text-gray-900 font-mono">INV-{invoice.id.slice(0, 8).toUpperCase()}</h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              style={{ backgroundColor: statusInfo.bg, color: statusInfo.text }}>
+              {statusInfo.label}
+            </span>
             {isOverdue && (
-              <Badge variant="destructive">Overdue</Badge>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                Overdue
+              </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-gray-400 mt-0.5">
             Order: <span className="font-mono">ORD-{invoice.order.id.slice(0, 8).toUpperCase()}</span>
             {" · "}Issued {formatDate(invoice.issued_at)}
             {" · "}Due {formatDate(invoice.due_at)}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.open(`/api/agent/invoices/${id}/pdf`, "_blank")}>
-            <Download className="h-4 w-4 mr-1.5" /> Download PDF
-          </Button>
+          <button
+            onClick={() => window.open(`/api/agent/invoices/${id}/pdf`, "_blank")}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" /> Download PDF
+          </button>
           {nextAction && (
-            <Button size="sm" onClick={() => handleStatusUpdate(nextAction.value)} disabled={updating}>
-              {updating ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Updating…</> : <>{nextAction.icon}{nextAction.label}</>}
-            </Button>
+            <button
+              onClick={() => handleStatusUpdate(nextAction.value)}
+              disabled={updating}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+              style={{ backgroundColor: "#0d2144" }}
+            >
+              {updating ? <><Loader2 className="h-4 w-4 animate-spin" /> Updating…</> : <>{nextAction.icon} {nextAction.label}</>}
+            </button>
           )}
         </div>
       </div>
 
-      {/* Financials */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: "Invoice Total", value: formatCurrency(Number(invoice.order.total_amount)), highlight: false },
-          { label: "Cost", value: formatCurrency(Number(invoice.order.cost_amount)), highlight: false },
-          { label: "Margin", value: formatCurrency(Number(invoice.order.margin_amount)), highlight: true },
-          { label: "Commission", value: invoice.order.commission ? formatCurrency(Number(invoice.order.commission.commission_earned)) : "—", highlight: false },
-        ].map(card => (
-          <Card key={card.label}>
-            <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-muted-foreground">{card.label}</p>
-              <p className={cn("text-xl font-bold mt-0.5", card.highlight && "text-green-600")}>{card.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Buyer */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">Bill To</CardTitle></CardHeader>
-          <CardContent>
-            <p className="font-semibold">{invoice.buyer.name}</p>
-            <p className="text-sm text-muted-foreground">{invoice.buyer.company}</p>
-            <p className="text-sm text-muted-foreground">{invoice.buyer.email}</p>
-            {invoice.buyer.address && <p className="text-sm text-muted-foreground">{invoice.buyer.address}</p>}
-          </CardContent>
-        </Card>
-        {invoice.order.rfq.notes && (
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">Notes</CardTitle></CardHeader>
-            <CardContent><p className="text-sm">{invoice.order.rfq.notes}</p></CardContent>
-          </Card>
-        )}
-      </div>
-
-      <Separator className="mb-6" />
-
-      {/* Line items */}
-      <h2 className="font-semibold mb-3">Line Items</h2>
-      <div className="rounded-lg border overflow-hidden mb-6">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Unit Price</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoice.lines.map((line) => (
-              <TableRow key={line.number}>
-                <TableCell className="text-muted-foreground">{line.number}</TableCell>
-                <TableCell className="font-medium">{line.product_name}</TableCell>
-                <TableCell>{line.product_unit}</TableCell>
-                <TableCell className="text-right">{line.quantity.toLocaleString()}</TableCell>
-                <TableCell className="text-right">{formatCurrency(line.unit_price, line.currency)}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(line.line_total, line.currency)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Total */}
-      <div className="flex justify-end">
-        <div className="w-56 space-y-2">
-          <Separator />
-          <div className="flex justify-between font-bold text-lg pt-1">
-            <span>Total Due</span>
-            <span>{formatCurrency(Number(invoice.amount))}</span>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Line items */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900 text-sm">Line Items</h2>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Product</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qty</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit Price</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {invoice.lines.map((line) => (
+                  <tr key={line.number} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-gray-400">{line.number}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{line.product_name}</td>
+                    <td className="px-4 py-3 text-gray-500">{line.product_unit}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{line.quantity.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(line.unit_price, line.currency)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(line.line_total, line.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <div className="text-right">
+                <p className="text-xs text-gray-500 mb-1">Total Due</p>
+                <p className="text-xl font-bold text-gray-900">{formatCurrency(Number(invoice.amount))}</p>
+              </div>
+            </div>
           </div>
-          {invoice.order.commission && (
-            <p className="text-xs text-muted-foreground text-right">
-              Commission ({invoice.order.commission.commission_rate}%): {formatCurrency(Number(invoice.order.commission.commission_earned))}
-              {" · "}<span className={invoice.order.commission.status === "paid" ? "text-green-600" : ""}>{invoice.order.commission.status}</span>
-            </p>
+        </div>
+
+        {/* Right: Sidebar */}
+        <div className="space-y-4">
+          {/* Financials */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Financials</h3>
+            <div className="space-y-2.5">
+              {[
+                { label: "Revenue", value: formatCurrency(Number(invoice.order.total_amount)) },
+                { label: "Cost", value: formatCurrency(Number(invoice.order.cost_amount)) },
+                { label: "Margin", value: formatCurrency(Number(invoice.order.margin_amount)), green: true },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">{row.label}</span>
+                  <span className={`font-semibold ${row.green ? "text-emerald-600" : "text-gray-900"}`}>{row.value}</span>
+                </div>
+              ))}
+              {invoice.order.commission && (
+                <div className="pt-2 border-t border-gray-100 text-xs text-gray-400 flex justify-between">
+                  <span>Commission ({invoice.order.commission.commission_rate}%)</span>
+                  <span>{formatCurrency(Number(invoice.order.commission.commission_earned))}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bill To */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Bill To</h3>
+            <p className="font-semibold text-gray-900 text-sm">{invoice.buyer.name}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{invoice.buyer.company}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{invoice.buyer.email}</p>
+            {invoice.buyer.address && <p className="text-xs text-gray-400 mt-0.5">{invoice.buyer.address}</p>}
+          </div>
+
+          {/* Notes */}
+          {invoice.order.rfq.notes && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Notes</h3>
+              <p className="text-sm text-gray-600">{invoice.order.rfq.notes}</p>
+            </div>
           )}
         </div>
       </div>

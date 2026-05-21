@@ -10,7 +10,10 @@ export async function GET() {
   const buyers = await prisma.buyer.findMany({
     where: { assigned_agent_id: agent.id },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, company: true, email: true, phone: true, address: true },
+    select: {
+      id: true, name: true, company: true, email: true, phone: true, address: true, created_at: true,
+      _count: { select: { rfqs: true, orders: true } },
+    },
   });
   return ok(buyers);
 }

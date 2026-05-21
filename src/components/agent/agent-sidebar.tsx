@@ -3,31 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { FileText, PlusCircle, LayoutGrid, ShoppingCart, Receipt, ClipboardCheck, DollarSign } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, FileText, DollarSign, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem { label: string; href: string; icon: LucideIcon; exact?: boolean }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/agent", icon: LayoutGrid, exact: true },
-  { label: "My RFQs", href: "/agent/rfqs", icon: FileText },
-  { label: "New RFQ", href: "/agent/rfqs/new", icon: PlusCircle },
-  { label: "Orders", href: "/agent/orders", icon: ShoppingCart },
-  { label: "Invoices", href: "/agent/invoices", icon: Receipt },
-  { label: "QA Surveys", href: "/agent/surveys", icon: ClipboardCheck },
+  { label: "Dashboard", href: "/agent", icon: LayoutDashboard, exact: true },
+  { label: "Prospects", href: "/agent/buyers", icon: Users },
+  { label: "Log", href: "/agent/orders", icon: ClipboardList },
+  { label: "Quotes", href: "/agent/rfqs", icon: FileText },
   { label: "Commissions", href: "/agent/commissions", icon: DollarSign },
+  { label: "Settings", href: "/agent/settings", icon: Settings },
 ];
 
 export function AgentSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-56 bg-card border-r flex flex-col z-30">
-      <div className="h-14 flex items-center px-4 border-b">
-        <span className="font-bold text-lg tracking-tight">ProcureX</span>
-        <span className="ml-2 text-xs bg-blue-600 text-white rounded px-1.5 py-0.5">Agent</span>
+    <aside className="fixed inset-y-0 left-0 w-60 flex flex-col z-30" style={{ backgroundColor: "#0d2144" }}>
+      {/* Logo */}
+      <div className="h-16 flex items-center px-5 border-b border-white/10">
+        <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3" style={{ backgroundColor: "#1e4db7" }}>
+          P
+        </div>
+        <span className="text-white font-semibold text-base tracking-tight">ProcureX</span>
       </div>
-      <nav className="flex-1 py-4 px-3 space-y-0.5">
+
+      {/* Nav */}
+      <nav className="flex-1 py-6 px-3 space-y-0.5">
         {navItems.map((item) => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -36,9 +40,12 @@ export function AgentSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors",
-                isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                isActive
+                  ? "text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
               )}
+              style={isActive ? { backgroundColor: "#1e4db7" } : undefined}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {item.label}
@@ -46,6 +53,19 @@ export function AgentSidebar() {
           );
         })}
       </nav>
+
+      {/* Bottom user hint */}
+      <div className="px-4 py-4 border-t border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            AG
+          </div>
+          <div className="min-w-0">
+            <p className="text-white text-xs font-medium truncate">Agent</p>
+            <p className="text-white/40 text-xs truncate">agent@procurex.com</p>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }

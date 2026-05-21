@@ -2,14 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Check, Truck, Package, ClipboardCheck, PackageCheck, Star } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, MapPin, User, Star } from "lucide-react";
 
 interface SubPOLine { id: string; quantity: string; unit_price: string; product: { name: string; unit: string } }
 interface SubPO {
@@ -29,31 +23,29 @@ interface Order {
   survey_id: string | null;
 }
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  confirmed: "Confirmed", processing: "Processing",
-  partially_delivered: "Partially Delivered", delivered: "Delivered",
-};
-const ORDER_STATUS_VARIANTS: Record<string, "secondary" | "warning" | "success"> = {
-  confirmed: "secondary", processing: "warning",
-  partially_delivered: "warning", delivered: "success",
+const ORDER_STATUS: Record<string, { bg: string; text: string; label: string }> = {
+  confirmed:           { bg: "#dbeafe", text: "#1d4ed8", label: "Confirmed" },
+  processing:          { bg: "#fef3c7", text: "#b45309", label: "Processing" },
+  partially_delivered: { bg: "#ede9fe", text: "#7c3aed", label: "Partially Delivered" },
+  delivered:           { bg: "#d1fae5", text: "#065f46", label: "Delivered" },
 };
 
-const SUBPO_STEPS = [
-  { key: "sent", label: "Sent", icon: Package },
-  { key: "acknowledged", label: "Acknowledged", icon: ClipboardCheck },
-  { key: "dispatched", label: "Dispatched", icon: Truck },
-  { key: "delivered", label: "Delivered", icon: PackageCheck },
+const STEPS = [
+  { key: "sent",         label: "Processed" },
+  { key: "acknowledged", label: "Ready" },
+  { key: "dispatched",   label: "In Transit" },
+  { key: "delivered",    label: "Delivered" },
 ];
 
 const NEXT_STATUS: Record<string, { label: string; value: string }> = {
-  sent: { label: "Mark Acknowledged", value: "acknowledged" },
-  acknowledged: { label: "Mark Dispatched", value: "dispatched" },
-  dispatched: { label: "Mark Delivered", value: "delivered" },
+  sent:         { label: "Mark Ready", value: "acknowledged" },
+  acknowledged: { label: "Mark In Transit", value: "dispatched" },
+  dispatched:   { label: "Mark Delivered", value: "delivered" },
 };
 
-function SubPOTimeline({ orderId, subpo, onStatusUpdate }: { orderId: string; subpo: SubPO; onStatusUpdate: () => void }) {
+function ShipmentProgress({ orderId, subpo, onUpdate }: { orderId: string; subpo: SubPO; onUpdate: () => void }) {
   const [updating, setUpdating] = useState(false);
-  const currentIdx = SUBPO_STEPS.findIndex(s => s.key === subpo.status);
+  const currentIdx = STEPS.findIndex(s => s.key === subpo.status);
   const next = NEXT_STATUS[subpo.status];
 
   async function handleUpdate() {
@@ -65,38 +57,55 @@ function SubPOTimeline({ orderId, subpo, onStatusUpdate }: { orderId: string; su
       body: JSON.stringify({ status: next.value }),
     });
     setUpdating(false);
-    onStatusUpdate();
+    onUpdate();
   }
 
   return (
-    <div className="flex items-center gap-1 mt-3">
-      {SUBPO_STEPS.map((step, i) => {
-        const done = i <= currentIdx;
-        const Icon = step.icon;
-        return (
-          <div key={step.key} className="flex items-center">
-            <div className={cn(
-              "flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors",
-              done ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-            )}>
-              <Icon className="h-3 w-3" />
-              {step.label}
+    <div className="mt-4">
+      {/* Step bar */}
+      <div className="flex items-center">
+        {STEPS.map((step, i) => {
+          const done = i <= currentIdx;
+          const isLast = i === STEPS.length - 1;
+          return (
+            <div key={step.key} className="flex items-center flex-1">
+              <div className="flex flex-col items-center">
+                <div
+                  className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all"
+                  style={done
+                    ? { backgroundColor: "#0d2144", borderColor: "#0d2144", color: "#fff" }
+                    : { backgroundColor: "#fff", borderColor: "#d1d5db", color: "#9ca3af" }
+                  }
+                >
+                  {done && i < currentIdx ? "✓" : i + 1}
+                </div>
+                <span className="text-xs mt-1 font-medium" style={{ color: done ? "#0d2144" : "#9ca3af" }}>{step.label}</span>
+              </div>
+              {!isLast && (
+                <div className="flex-1 h-0.5 mx-2 mb-4" style={{ backgroundColor: i < currentIdx ? "#0d2144" : "#e5e7eb" }} />
+              )}
             </div>
-            {i < SUBPO_STEPS.length - 1 && (
-              <div className={cn("h-px w-4 mx-0.5", done && i < currentIdx ? "bg-primary/40" : "bg-border")} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Action button */}
       {next && (
-        <Button size="sm" variant="outline" className="ml-3 h-7 text-xs" onClick={handleUpdate} disabled={updating}>
-          {updating ? "Updating…" : next.label}
-        </Button>
+        <div className="mt-3">
+          <button
+            onClick={handleUpdate}
+            disabled={updating}
+            className="px-4 py-1.5 rounded-lg text-xs font-medium text-white transition-colors disabled:opacity-60"
+            style={{ backgroundColor: "#1e4db7" }}
+          >
+            {updating ? "Updating…" : next.label}
+          </button>
+        </div>
       )}
       {subpo.status === "delivered" && (
-        <span className="ml-3 text-xs text-green-600 flex items-center gap-1 font-medium">
-          <Check className="h-3.5 w-3.5" /> Delivered {subpo.delivered_at ? formatDate(subpo.delivered_at) : ""}
-        </span>
+        <p className="mt-2 text-xs text-emerald-600 font-medium">
+          ✓ Delivered {subpo.delivered_at ? formatDate(subpo.delivered_at) : ""}
+        </p>
       )}
     </div>
   );
@@ -119,132 +128,163 @@ export default function OrderDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>;
-  if (!order) return <div className="text-center py-16 text-destructive">Order not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
+  if (!order) return <div className="text-center py-16 text-red-500">Order not found.</div>;
 
-  const currency = "USD";
+  const orderStatus = ORDER_STATUS[order.status] ?? { bg: "#f3f4f6", text: "#374151", label: order.status };
 
   return (
     <div>
-      <button onClick={() => router.push("/agent/orders")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Back to Orders
+      {/* Breadcrumb */}
+      <button onClick={() => router.push("/agent/orders")} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
+        <ArrowLeft className="h-4 w-4" /> Procurement Log
       </button>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold font-mono">ORD-{order.id.slice(0, 8).toUpperCase()}</h1>
-            <Badge variant={ORDER_STATUS_VARIANTS[order.status] ?? "secondary"}>
-              {ORDER_STATUS_LABELS[order.status] ?? order.status}
-            </Badge>
+            <h1 className="text-xl font-bold text-gray-900 font-mono">ORD-{order.id.slice(0, 8).toUpperCase()}</h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              style={{ backgroundColor: orderStatus.bg, color: orderStatus.text }}>
+              {orderStatus.label}
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">Created {formatDate(order.created_at)}</p>
+          <p className="text-sm text-gray-400 mt-0.5">Created {formatDate(order.created_at)}</p>
         </div>
         <div className="flex gap-2">
           {order.status === "delivered" && !order.survey_submitted && (
-            <Button size="sm" onClick={() => router.push(`/agent/surveys/new?order_id=${order.id}`)}>
-              <Star className="h-4 w-4 mr-1.5" /> Submit QA Survey
-            </Button>
+            <button
+              onClick={() => router.push(`/agent/surveys/new?order_id=${order.id}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+              style={{ backgroundColor: "#0d2144" }}
+            >
+              <Star className="h-4 w-4" /> Submit QA Survey
+            </button>
           )}
           {order.status === "delivered" && order.survey_submitted && order.survey_id && (
-            <Button variant="outline" size="sm" onClick={() => router.push(`/agent/surveys/${order.survey_id}`)}>
-              <Star className="h-4 w-4 mr-1.5" /> View Survey
-            </Button>
+            <button
+              onClick={() => router.push(`/agent/surveys/${order.survey_id}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Star className="h-4 w-4" /> View Survey
+            </button>
           )}
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: "Total Revenue", value: formatCurrency(Number(order.total_amount), currency), highlight: false },
-          { label: "Total Cost", value: formatCurrency(Number(order.cost_amount), currency), highlight: false },
-          { label: "Margin", value: formatCurrency(Number(order.margin_amount), currency), highlight: true },
-          { label: "Commission", value: order.commission ? formatCurrency(Number(order.commission.commission_earned), currency) : "—", highlight: false },
-        ].map(card => (
-          <Card key={card.label}>
-            <CardContent className="pt-4 pb-3">
-              <p className="text-xs text-muted-foreground">{card.label}</p>
-              <p className={cn("text-xl font-bold mt-0.5", card.highlight && "text-green-600")}>{card.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Vendor Shipments */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="font-semibold text-gray-900">Vendor Shipments ({order.subpos.length})</h2>
 
-      {/* Buyer */}
-      <Card className="mb-6">
-        <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground tracking-wide">Buyer</CardTitle></CardHeader>
-        <CardContent className="flex gap-6">
-          <div>
-            <p className="font-semibold">{order.buyer.name}</p>
-            <p className="text-sm text-muted-foreground">{order.buyer.company}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{order.buyer.email}</p>
-            {order.buyer.address && <p className="text-sm text-muted-foreground">{order.buyer.address}</p>}
-          </div>
-          {order.rfq.notes && (
-            <div className="ml-auto max-w-sm">
-              <p className="text-xs text-muted-foreground mb-1">Notes</p>
-              <p className="text-sm">{order.rfq.notes}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Separator className="mb-6" />
-
-      {/* SubPOs */}
-      <h2 className="font-semibold mb-4">Purchase Orders ({order.subpos.length})</h2>
-      <div className="space-y-4">
-        {order.subpos.map((subpo) => (
-          <Card key={subpo.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+          {order.subpos.map((subpo) => (
+            <div key={subpo.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-semibold">PO-{subpo.id.slice(0, 8).toUpperCase()}</span>
-                    <span className="text-sm text-muted-foreground">· {subpo.supplier.name} ({subpo.supplier.country})</span>
-                  </div>
-                  <SubPOTimeline
-                    orderId={id}
-                    subpo={subpo}
-                    onStatusUpdate={load}
-                  />
+                  <p className="font-mono text-sm font-semibold text-gray-900">PO-{subpo.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{subpo.supplier.country}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold">{formatCurrency(Number(subpo.total_amount), currency)}</p>
-                  <p className="text-xs text-muted-foreground">Cost to supplier</p>
-                </div>
+                <p className="font-bold text-gray-900">{formatCurrency(Number(subpo.total_amount))}</p>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subpo.line_items.map((li) => (
-                    <TableRow key={li.id}>
-                      <TableCell className="font-medium">{li.product.name}</TableCell>
-                      <TableCell>{li.product.unit}</TableCell>
-                      <TableCell className="text-right">{Number(li.quantity).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(li.unit_price), currency)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(li.unit_price) * Number(li.quantity), currency)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))}
+
+              <ShipmentProgress orderId={id} subpo={subpo} onUpdate={load} />
+
+              {/* Line items */}
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-400">
+                      <th className="text-left pb-2 font-medium">Product</th>
+                      <th className="text-left pb-2 font-medium">Unit</th>
+                      <th className="text-right pb-2 font-medium">Qty</th>
+                      <th className="text-right pb-2 font-medium">Unit Price</th>
+                      <th className="text-right pb-2 font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {subpo.line_items.map((li) => (
+                      <tr key={li.id}>
+                        <td className="py-1.5 font-medium text-gray-700">{li.product.name}</td>
+                        <td className="py-1.5 text-gray-400">{li.product.unit}</td>
+                        <td className="py-1.5 text-right text-gray-700">{Number(li.quantity).toLocaleString()}</td>
+                        <td className="py-1.5 text-right text-gray-700">{formatCurrency(Number(li.unit_price))}</td>
+                        <td className="py-1.5 text-right font-semibold text-gray-900">{formatCurrency(Number(li.unit_price) * Number(li.quantity))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right: Summary sidebar */}
+        <div className="space-y-4">
+          {/* Order Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Order Summary</h3>
+            <div className="space-y-2.5">
+              {[
+                { label: "Revenue", value: formatCurrency(Number(order.total_amount)), bold: false },
+                { label: "Cost", value: formatCurrency(Number(order.cost_amount)), bold: false },
+                { label: "Margin", value: formatCurrency(Number(order.margin_amount)), green: true },
+                { label: "Commission", value: order.commission ? formatCurrency(Number(order.commission.commission_earned)) : "—", bold: false },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">{row.label}</span>
+                  <span className={`font-semibold ${row.green ? "text-emerald-600" : "text-gray-900"}`}>{row.value}</span>
+                </div>
+              ))}
+              {order.commission && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                  <span className="text-gray-400">Rate</span>
+                  <span className="text-gray-500">{Number(order.commission.commission_rate)}%</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Delivery Location */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-gray-400" /> Delivery Location
+            </h3>
+            <div className="space-y-1 text-sm">
+              <p className="font-medium text-gray-900">{order.buyer.company}</p>
+              <p className="text-gray-500">{order.buyer.address ?? "No address provided"}</p>
+            </div>
+          </div>
+
+          {/* Assigned Officer */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-400" /> Client Contact
+            </h3>
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: "#0d2144" }}>
+                {order.buyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{order.buyer.name}</p>
+                <p className="text-xs text-gray-400">{order.buyer.email}</p>
+              </div>
+            </div>
+            {order.rfq.notes && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-1">Notes</p>
+                <p className="text-sm text-gray-600">{order.rfq.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

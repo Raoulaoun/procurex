@@ -2,11 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ClipboardCheck } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Survey {
@@ -21,16 +16,16 @@ interface Survey {
   buyer: { name: string; company: string };
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  const variant =
-    score >= 4 ? "success" : score >= 3 ? "warning" : "destructive";
-  return <Badge variant={variant}>{score}/5</Badge>;
-}
-
-function OverallBadge({ score }: { score: string }) {
-  const n = Number(score);
-  const variant = n >= 7 ? "success" : n >= 5 ? "warning" : "destructive";
-  return <Badge variant={variant}>{n.toFixed(1)}/10</Badge>;
+function ScorePill({ score, outOf = 5 }: { score: number; outOf?: number }) {
+  const pct = score / outOf;
+  const bg = pct >= 0.8 ? "#d1fae5" : pct >= 0.6 ? "#fef3c7" : "#fee2e2";
+  const text = pct >= 0.8 ? "#065f46" : pct >= 0.6 ? "#b45309" : "#b91c1c";
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+      style={{ backgroundColor: bg, color: text }}>
+      {score}/{outOf}
+    </span>
+  );
 }
 
 export default function SurveysPage() {
@@ -39,68 +34,68 @@ export default function SurveysPage() {
 
   useEffect(() => {
     fetch("/api/agent/surveys")
-      .then(r => r.json())
-      .then(data => { setSurveys(data); setLoading(false); });
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setSurveys(Array.isArray(data) ? data : []); setLoading(false); });
   }, []);
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">QA Surveys</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Post-delivery quality assessments — scores update supplier ratings</p>
+        <h1 className="text-xl font-bold text-gray-900">QA Surveys</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Post-delivery quality assessments — scores update supplier ratings</p>
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48">
+          <div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" />
+        </div>
       ) : surveys.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center py-16 text-center">
-            <ClipboardCheck className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium mb-1">No surveys yet</p>
-            <p className="text-sm text-muted-foreground">Submit a survey after an order is fully delivered.</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center py-16 text-center">
+          <p className="font-medium text-gray-700 mb-1">No surveys yet</p>
+          <p className="text-sm text-gray-400">Submit a survey after an order is fully delivered.</p>
+        </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Buyer</TableHead>
-                <TableHead className="text-center">Delivery</TableHead>
-                <TableHead className="text-center">Quality</TableHead>
-                <TableHead className="text-center">Accuracy</TableHead>
-                <TableHead className="text-center">Packaging</TableHead>
-                <TableHead className="text-center">Overall</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-20" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Buyer</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Delivery</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Quality</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Accuracy</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Packaging</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Overall</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Submitted</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
               {surveys.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs font-medium">
+                <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700">
                     ORD-{s.order.id.slice(0, 8).toUpperCase()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{s.buyer.name}</div>
-                    <div className="text-xs text-muted-foreground">{s.buyer.company}</div>
-                  </TableCell>
-                  <TableCell className="text-center"><ScoreBadge score={s.delivery_score} /></TableCell>
-                  <TableCell className="text-center"><ScoreBadge score={s.quality_score} /></TableCell>
-                  <TableCell className="text-center"><ScoreBadge score={s.accuracy_score} /></TableCell>
-                  <TableCell className="text-center"><ScoreBadge score={s.packaging_score} /></TableCell>
-                  <TableCell className="text-center"><OverallBadge score={s.overall_score} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDate(s.submitted_at)}</TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/agent/surveys/${s.id}`}>View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-900">{s.buyer.name}</p>
+                    <p className="text-xs text-gray-400">{s.buyer.company}</p>
+                  </td>
+                  <td className="px-4 py-3 text-center"><ScorePill score={s.delivery_score} /></td>
+                  <td className="px-4 py-3 text-center"><ScorePill score={s.quality_score} /></td>
+                  <td className="px-4 py-3 text-center"><ScorePill score={s.accuracy_score} /></td>
+                  <td className="px-4 py-3 text-center"><ScorePill score={s.packaging_score} /></td>
+                  <td className="px-4 py-3 text-center"><ScorePill score={Number(Number(s.overall_score).toFixed(1))} outOf={10} /></td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(s.submitted_at)}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/agent/surveys/${s.id}`}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+                      View
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
     </div>
