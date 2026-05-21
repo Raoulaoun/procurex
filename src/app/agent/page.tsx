@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FileText, Users, ClipboardList, DollarSign, Plus, ArrowRight } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface DashboardData {
@@ -131,20 +132,86 @@ export default function AgentDashboard() {
   return (
     <div>
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Your procurement activity at a glance</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Your procurement activity at a glance</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <Link
+          href="/agent/rfqs/new"
+          className="group flex items-center gap-3 p-4 rounded-xl border-2 text-white transition-all hover:opacity-90 hover:shadow-md"
+          style={{ backgroundColor: "#0d2144", borderColor: "#0d2144" }}
+        >
+          <div className="h-9 w-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0 group-hover:bg-white/25 transition-colors">
+            <Plus className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-white">New Quote</p>
+            <p className="text-xs text-white/60 truncate">Create a quotation</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/agent/buyers#add"
+          className="group flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white transition-all hover:shadow-md hover:border-blue-200"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors" style={{ backgroundColor: "#eff6ff" }}>
+            <Users className="h-5 w-5" style={{ color: "#1e4db7" }} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-gray-900">Add Prospect</p>
+            <p className="text-xs text-gray-400 truncate">New client</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/agent/orders"
+          className="group flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white transition-all hover:shadow-md hover:border-blue-200"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors" style={{ backgroundColor: "#f0fdf4" }}>
+            <ClipboardList className="h-5 w-5" style={{ color: "#059669" }} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-gray-900">View Orders</p>
+            <p className="text-xs text-gray-400 truncate">Track deliveries</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/agent/commissions"
+          className="group flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white transition-all hover:shadow-md hover:border-blue-200"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors" style={{ backgroundColor: "#fffbeb" }}>
+            <DollarSign className="h-5 w-5" style={{ color: "#d97706" }} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-gray-900">Commissions</p>
+            <p className="text-xs text-gray-400 truncate">Track earnings</p>
+          </div>
+        </Link>
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <p className="text-xs text-gray-500 font-medium mb-1">{kpi.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{kpi.isText ? "" : ""}{kpi.value}</p>
+      {(() => {
+        const kpiLinks = ["/agent/buyers", "/agent/rfqs", "/agent/rfqs", "/agent/orders", "/agent/commissions", "/agent/commissions"];
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            {kpis.map((kpi, i) => (
+              <Link key={kpi.label} href={kpiLinks[i]} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md hover:border-blue-200 transition-all group">
+                <p className="text-xs text-gray-500 font-medium mb-1">{kpi.label}</p>
+                <div className="flex items-end justify-between">
+                  <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+                  <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-blue-400 transition-colors mb-1" />
+                </div>
+              </Link>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Pipeline Funnel */}

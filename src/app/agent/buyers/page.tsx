@@ -115,6 +115,13 @@ export default function ProspectsPage() {
   const [view, setView] = useState<"list" | "kanban">("list");
   const [showModal, setShowModal] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#add") {
+      setShowModal(true);
+      history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   function load() {
     setLoading(true);
     fetch("/api/agent/buyers")
