@@ -1,12 +1,24 @@
+import { NextResponse } from "next/server";
+
+// DEV MODE: admin check always passes
+export async function requireAdmin() {
+  return { user: { id: "dev", user_metadata: { role: "super_admin" } }, error: undefined };
+}
+
+export function ok<T>(data: T, status = 200) {
+  return NextResponse.json(data, { status });
+}
+
+export function err(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+/* ── PRODUCTION (restore when deploying) ──────────────────────────────────────
+
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function requireAdmin() {
-  // Dev bypass: skip auth entirely
-  if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true") {
-    return { user: { id: "dev", user_metadata: { role: "super_admin" } } };
-  }
-
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
@@ -22,10 +34,4 @@ export async function requireAdmin() {
   return { user };
 }
 
-export function ok<T>(data: T, status = 200) {
-  return NextResponse.json(data, { status });
-}
-
-export function err(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
-}
+*/

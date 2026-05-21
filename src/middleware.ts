@@ -1,3 +1,20 @@
+import { NextResponse, type NextRequest } from "next/server";
+
+// ── DEV MODE: auth completely disabled for local preview ──────────────────────
+// To re-enable auth, delete the next 3 lines and uncomment the full middleware below
+export async function middleware(_request: NextRequest) {
+  return NextResponse.next();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
+
+/*  ── PRODUCTION MIDDLEWARE (restore when deploying) ──────────────────────────
+
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -10,11 +27,6 @@ const ROLE_ALLOWED_PATHS: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
-  // ── Dev bypass: skip all auth when NEXT_PUBLIC_DEV_AUTH_BYPASS=true ────────
-  if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true") {
-    return NextResponse.next({ request });
-  }
-  // ─────────────────────────────────────────────────────────────────────────
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -22,13 +34,9 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
+        getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -41,7 +49,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  // Allow public paths and static assets
   if (
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
@@ -50,7 +57,6 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Not authenticated → redirect to login
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -58,16 +64,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Fetch role from user metadata (set on sign-up via service role)
   const role = user.user_metadata?.role as string | undefined;
-
-  // Enforce role-based path access
   if (role && pathname !== "/") {
     const allowed = ROLE_ALLOWED_PATHS[role] ?? [];
     const hasAccess = allowed.some((prefix) => pathname.startsWith(prefix));
-    // If accessing a restricted area without permission, redirect home
-    const isRestricted =
-      pathname.startsWith("/admin") || pathname.startsWith("/agent");
+    const isRestricted = pathname.startsWith("/admin") || pathname.startsWith("/agent");
     if (isRestricted && !hasAccess) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
@@ -83,3 +84,5 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
+
+*/
