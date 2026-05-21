@@ -4,7 +4,8 @@
  */
 
 import { config } from "dotenv";
-config({ path: new URL("../.env", import.meta.url).pathname });
+// Load .env from the project root (npm always sets cwd to package.json dir)
+config();
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
