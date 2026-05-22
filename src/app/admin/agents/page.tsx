@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, TrendingUp, Clock, ShoppingCart, Loader2 } from "lucide-react";
+import { Users, TrendingUp, Clock, ShoppingCart, Loader2, Plus, Info } from "lucide-react";
+import { CRUDModal } from "@/components/admin/crud-modal";
 import { formatCurrency } from "@/lib/utils";
 
 interface Agent {
@@ -13,17 +17,53 @@ interface Agent {
   commissions: { commission_earned: string; status: string }[];
 }
 
+const emptyForm = { full_name: "", email: "", commission_rate: "10" };
+
 export default function AdminAgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
 
-  useEffect(() => {
+  function load() {
     fetch("/api/admin/agents")
       .then(r => r.ok ? r.json() : [])
       .then(d => setAgents(Array.isArray(d) ? d : []))
       .catch(() => setAgents([]))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function openModal() { setForm(emptyForm); setFormError(""); setModal(true); }
+  function closeModal() { setModal(false); setFormError(""); }
+
+  async function handleSave() {
+    setFormError("");
+    const rate = Number(form.commission_rate);
+    if (!form.full_name.trim()) { setFormError("Full name is required."); return; }
+    if (!form.email.trim()) { setFormError("Email is required."); return; }
+    if (isNaN(rate) || rate < 5 || rate > 25) { setFormError("Commission rate must be between 5% and 25%."); return; }
+
+    setSaving(true);
+    const res = await fetch("/api/admin/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name: form.full_name.trim(), email: form.email.trim(), commission_rate: rate }),
+    });
+    setSaving(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setFormError(data.error ?? "Failed to create agent.");
+      return;
+    }
+
+    closeModal();
+    load();
+  }
 
   const totalEarned = agents.reduce((s, a) =>
     s + a.commissions.reduce((cs, c) => cs + Number(c.commission_earned), 0), 0);
@@ -40,9 +80,14 @@ export default function AdminAgentsPage() {
 
   return (
     <div>
-      <div className="mb-7 pb-5 border-b">
-        <h1 className="text-xl font-semibold">Agents</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage procurement agents and their commissions</p>
+      <div className="mb-7 pb-5 border-b flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Agents</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage procurement agents and their commissions</p>
+        </div>
+        <Button onClick={openModal} size="sm" className="gap-1.5" style={{ backgroundColor: "#0d2144" }}>
+          <Plus className="h-4 w-4" /> Add Agent
+        </Button>
       </div>
 
       {/* Summary cards */}
@@ -75,6 +120,10 @@ export default function AdminAgentsPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
           <p className="font-medium text-sm">No agents yet</p>
+          <p className="text-xs text-muted-foreground mt-1 mb-4">Add agents to start managing commissions</p>
+          <Button onClick={openModal} size="sm" style={{ backgroundColor: "#0d2144" }}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Agent
+          </Button>
         </div>
       ) : (
         <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
@@ -122,6 +171,50 @@ export default function AdminAgentsPage() {
           </Table>
         </div>
       )}
+
+      {/* Add Agent modal */}
+      <CRUDModal open={modal} onClose={closeModal} title="Add Agent" onSave={handleSave} saving={saving}>
+        <div className="space-y-3">
+          <div>
+            <Label>Full Name <span className="text-red-500">*</span></Label>
+            <Input
+              className="mt-1"
+              value={form.full_name}
+              onChange={e => setForm({ ...form, full_name: e.target.value })}
+              placeholder="e.g. Alice Dupont"
+            />
+          </div>
+          <div>
+            <Label>Email <span className="text-red-500">*</span></Label>
+            <Input
+              className="mt-1"
+              type="email"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              placeholder="agent@example.com"
+            />
+          </div>
+          <div>
+            <Label>Commission Rate % <span className="text-muted-foreground font-normal">(5–25)</span></Label>
+            <Input
+              className="mt-1"
+              type="number"
+              min="5"
+              max="25"
+              step="0.5"
+              value={form.commission_rate}
+              onChange={e => setForm({ ...form, commission_rate: e.target.value })}
+            />
+          </div>
+          {formError && (
+            <p className="text-sm text-red-500">{formError}</p>
+          )}
+          <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-blue-700">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>In production, the agent will receive an email invitation to set their password.</span>
+          </div>
+        </div>
+      </CRUDModal>
     </div>
   );
 }

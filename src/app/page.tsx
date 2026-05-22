@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { LayoutDashboard, Users, FileText, ClipboardList, DollarSign, BarChart2, ArrowRight, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardList, DollarSign, BarChart2, ArrowRight, ShieldCheck, EyeOff, TrendingUp, Award } from "lucide-react";
 
 const AGENT_LINKS = [
   { href: "/agent",             icon: LayoutDashboard, label: "Dashboard",   desc: "Pipeline, KPIs & recent activity" },
-  { href: "/agent/buyers",      icon: Users,           label: "Prospects",   desc: "Manage clients & buyer relationships" },
+  { href: "/agent/buyers",      icon: Users,           label: "Clients",     desc: "Manage clients & buyer relationships" },
   { href: "/agent/rfqs",        icon: FileText,        label: "Quotations",  desc: "Create and track quotes" },
   { href: "/agent/orders",      icon: ClipboardList,   label: "Orders",      desc: "Track deliveries & sub-POs" },
   { href: "/agent/commissions", icon: DollarSign,      label: "Commissions", desc: "Monitor earnings & payouts" },
@@ -15,6 +15,12 @@ const ADMIN_LINKS = [
   { href: "/admin/catalogue/suppliers",   icon: ShieldCheck,  label: "Suppliers", desc: "Supplier pricing & quality" },
   { href: "/admin/reports",               icon: BarChart2,    label: "Analytics", desc: "Revenue, margins & performance" },
   { href: "/admin/orders",                icon: ClipboardList,label: "Orders",    desc: "Platform-wide order overview" },
+];
+
+const PLATFORM_MODEL = [
+  { icon: EyeOff,    text: "Supplier identity always hidden from agents" },
+  { icon: TrendingUp,text: "5–15% markup pre-baked into agent prices" },
+  { icon: Award,     text: "Commission earned per fulfilled order" },
 ];
 
 export default function HomePage() {
@@ -47,7 +53,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 text-sm">Agent Portal</h2>
-                <p className="text-xs text-gray-400">Sales & procurement operations</p>
+                <p className="text-xs text-gray-400">Agent portal — manage clients, quotes, orders</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -80,7 +86,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900 text-sm">Admin Portal</h2>
-                <p className="text-xs text-gray-400">Catalogue, suppliers & analytics</p>
+                <p className="text-xs text-gray-400">Admin portal — suppliers, catalogue, markup, analytics</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -106,7 +112,23 @@ export default function HomePage() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-12">
+        {/* Platform Model card */}
+        <div className="mt-8 rounded-2xl p-6 text-white" style={{ background: "linear-gradient(135deg, #0d2144 0%, #1e4db7 100%)" }}>
+          <h3 className="font-semibold text-sm mb-1">Platform Model</h3>
+          <p className="text-xs text-white/50 mb-4">How ProcureX works</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {PLATFORM_MODEL.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-start gap-3">
+                <div className="h-7 w-7 rounded-lg bg-white/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <Icon className="h-3.5 w-3.5 text-white" />
+                </div>
+                <p className="text-sm text-white/80 leading-snug">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-8">
           Dev mode · Auth bypassed · All routes accessible
         </p>
       </div>

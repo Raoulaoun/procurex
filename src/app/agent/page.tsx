@@ -68,8 +68,14 @@ function Avatar({ name }: { name: string }) {
 export default function AgentDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [commissionRate, setCommissionRate] = useState<number | null>(null);
 
   useEffect(() => {
+    fetch("/api/agent/profile")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setCommissionRate(d.commission_rate))
+      .catch(() => null);
+
     Promise.all([
       fetch("/api/agent/rfqs").then(r => r.ok ? r.json() : []),
       fetch("/api/agent/orders").then(r => r.ok ? r.json() : []),
@@ -121,12 +127,12 @@ export default function AgentDashboard() {
   const maxCount = Math.max(...funnelData.map(f => f.count), 1);
 
   const kpis = [
-    { label: "Total Prospects", value: data?.buyer_count ?? 0, suffix: "", delta: null },
+    { label: "Total Clients", value: data?.buyer_count ?? 0, suffix: "", delta: null },
     { label: "Active Convos", value: data?.rfq_counts.sent ?? 0, suffix: "", delta: null },
     { label: "Quotes Sent", value: data?.rfq_counts.total ?? 0, suffix: "", delta: null },
     { label: "Deals Closed", value: data?.order_counts.delivered ?? 0, suffix: "", delta: null },
-    { label: "Revenue", value: formatCurrency(data?.commission_totals.total_earned ?? 0), suffix: "", isText: true, delta: null },
-    { label: "Margin %", value: "—", suffix: "", delta: null },
+    { label: "Total Earned", value: formatCurrency(data?.commission_totals.total_earned ?? 0), suffix: "", isText: true, delta: null },
+    { label: "Commission Rate", value: commissionRate !== null ? `${commissionRate}%` : "—", suffix: "", delta: null },
   ];
 
   return (
@@ -163,7 +169,7 @@ export default function AgentDashboard() {
             <Users className="h-5 w-5" style={{ color: "#1e4db7" }} />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-sm text-gray-900">Add Prospect</p>
+            <p className="font-semibold text-sm text-gray-900">Add Client</p>
             <p className="text-xs text-gray-400 truncate">New client</p>
           </div>
         </Link>
@@ -197,7 +203,7 @@ export default function AgentDashboard() {
 
       {/* KPI cards */}
       {(() => {
-        const kpiLinks = ["/agent/buyers", "/agent/rfqs", "/agent/rfqs", "/agent/orders", "/agent/commissions", "/agent/commissions"];
+        const kpiLinks = ["/agent/buyers", "/agent/rfqs", "/agent/rfqs", "/agent/orders", "/agent/commissions", "/agent/commissions" ];
         return (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
             {kpis.map((kpi, i) => (

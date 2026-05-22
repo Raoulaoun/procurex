@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tag, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Tag, Pencil, Trash2, Loader2, Info } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Category {
@@ -63,6 +63,14 @@ export default function CategoriesPage() {
   return (
     <div>
       <PageHeader title="Categories" description="Manage product categories and their margin rates" onAdd={openAdd} addLabel="Add Category" />
+
+      <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 mb-5 text-xs text-blue-700">
+        <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <span>
+          Categories define product verticals. Each category&apos;s margin % is applied to all products within it.
+          Supplier identity is never revealed to agents regardless of category.
+        </span>
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">

@@ -415,14 +415,18 @@ function NewRFQForm() {
       {step === 3 && (
         <div>
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-sm text-gray-500">Apply tier to all:</span>
-            {["tier_1", "tier_2", "tier_3"].map(tier => (
+            <span className="text-sm text-gray-500">Apply to all:</span>
+            {[
+              { tier: "tier_1", label: "Best Quality" },
+              { tier: "tier_2", label: "Balanced" },
+              { tier: "tier_3", label: "Best Price" },
+            ].map(({ tier, label }) => (
               <button
                 key={tier}
                 onClick={() => applyTierToAll(tier)}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                {qualityTierLabel(tier)}
+                {label}
               </button>
             ))}
           </div>
@@ -453,6 +457,10 @@ function NewRFQForm() {
                       {li.options.map(opt => {
                         const isSelected = li.selected_option?.supplier_product_id === opt.supplier_product_id;
                         const stock = STOCK_LABELS[opt.stock_status];
+                        const tierDisplay =
+                          opt.quality_tier === "tier_1" ? { label: "Best Quality", bg: "#0d2144", color: "#fff" }
+                          : opt.quality_tier === "tier_2" ? { label: "Balanced", bg: "#e8f0ff", color: "#1e4db7" }
+                          : { label: "Best Price", bg: "#f3f4f6", color: "#374151" };
                         return (
                           <button
                             key={opt.supplier_product_id}
@@ -464,14 +472,9 @@ function NewRFQForm() {
                             }
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                style={opt.quality_tier === "tier_1"
-                                  ? { backgroundColor: "#0d2144", color: "#fff" }
-                                  : opt.quality_tier === "tier_2"
-                                  ? { backgroundColor: "#e8f0ff", color: "#1e4db7" }
-                                  : { backgroundColor: "#f3f4f6", color: "#374151" }
-                                }>
-                                {qualityTierLabel(opt.quality_tier)}
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                                style={{ backgroundColor: tierDisplay.bg, color: tierDisplay.color }}>
+                                {tierDisplay.label}
                               </span>
                               {isSelected && <Check className="h-3.5 w-3.5 text-blue-600" />}
                             </div>
@@ -480,8 +483,9 @@ function NewRFQForm() {
                               <span className="text-xs font-normal text-gray-400"> / {li.product_unit}</span>
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">Total: {formatCurrency(opt.line_total, opt.currency)}</p>
+                            <p className="text-xs font-medium text-gray-600 mt-1">~{opt.lead_time_days} day delivery</p>
                             <div className="border-t border-gray-100 mt-2 pt-2">
-                              <p className="text-xs text-gray-400">Lead: {opt.lead_time_days} days · MOQ: {opt.moq}</p>
+                              <p className="text-xs text-gray-400">MOQ: {opt.moq}</p>
                               <p className="text-xs font-medium mt-0.5" style={{ color: stock?.color }}>{stock?.label}</p>
                             </div>
                           </button>

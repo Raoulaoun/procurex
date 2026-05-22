@@ -2,23 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, ClipboardList, FileText, DollarSign, Settings } from "lucide-react";
+import { LayoutDashboard, Users, ClipboardList, FileText, DollarSign, Settings, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem { label: string; href: string; icon: LucideIcon; exact?: boolean }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/agent", icon: LayoutDashboard, exact: true },
-  { label: "Prospects", href: "/agent/buyers", icon: Users },
-  { label: "Log", href: "/agent/orders", icon: ClipboardList },
-  { label: "Quotes", href: "/agent/rfqs", icon: FileText },
-  { label: "Commissions", href: "/agent/commissions", icon: DollarSign },
-  { label: "Settings", href: "/agent/settings", icon: Settings },
+  { label: "Dashboard",   href: "/agent",             icon: LayoutDashboard, exact: true },
+  { label: "Clients",     href: "/agent/buyers",       icon: Users },
+  { label: "Quotes",      href: "/agent/rfqs",         icon: FileText },
+  { label: "Orders",      href: "/agent/orders",       icon: ClipboardList },
+  { label: "Commissions", href: "/agent/commissions",  icon: DollarSign },
+  { label: "Surveys",     href: "/agent/surveys",      icon: Star },
+  { label: "Settings",    href: "/agent/settings",     icon: Settings },
 ];
+
+interface AgentProfile { full_name: string; email: string }
 
 export function AgentSidebar() {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<AgentProfile | null>(null);
+
+  useEffect(() => {
+    fetch("/api/agent/profile")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setProfile({ full_name: d.full_name, email: d.email }))
+      .catch(() => null);
+  }, []);
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+    : "AG";
 
   return (
     <aside className="fixed inset-y-0 left-0 w-60 flex flex-col z-30" style={{ backgroundColor: "#0d2144" }}>
@@ -54,15 +70,15 @@ export function AgentSidebar() {
         })}
       </nav>
 
-      {/* Bottom user hint */}
+      {/* Bottom user info */}
       <div className="px-4 py-4 border-t border-white/10">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            AG
+            {initials}
           </div>
           <div className="min-w-0">
-            <p className="text-white text-xs font-medium truncate">Agent</p>
-            <p className="text-white/40 text-xs truncate">agent@procurex.com</p>
+            <p className="text-white text-xs font-medium truncate">{profile?.full_name ?? "Agent"}</p>
+            <p className="text-white/40 text-xs truncate">{profile?.email ?? "Loading…"}</p>
           </div>
         </div>
       </div>
