@@ -39,11 +39,11 @@ export default function ProductsPage() {
 
   async function loadMeta() {
     const [catRes, subRes] = await Promise.all([fetch("/api/admin/categories"), fetch("/api/admin/subcategories")]);
-    const cats = await catRes.json();
-    const subs = await subRes.json();
-    setCategories(cats);
-    setSubcategories(subs);
-    setFilteredSubs(subs);
+    const cats = catRes.ok ? await catRes.json() : [];
+    const subs = subRes.ok ? await subRes.json() : [];
+    setCategories(Array.isArray(cats) ? cats : []);
+    setSubcategories(Array.isArray(subs) ? subs : []);
+    setFilteredSubs(Array.isArray(subs) ? subs : []);
   }
 
   async function loadProducts(subcategoryId?: string, q?: string) {
@@ -52,7 +52,8 @@ export default function ProductsPage() {
     if (subcategoryId && subcategoryId !== "all") params.set("subcategory_id", subcategoryId);
     if (q) params.set("q", q);
     const res = await fetch(`/api/admin/products?${params}`);
-    setProducts(await res.json());
+    const data = res.ok ? await res.json() : [];
+    setProducts(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 

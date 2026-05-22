@@ -31,14 +31,16 @@ export default function SubcategoriesPage() {
 
   async function loadCategories() {
     const res = await fetch("/api/admin/categories");
-    setCategories(await res.json());
+    const data = res.ok ? await res.json() : [];
+    setCategories(Array.isArray(data) ? data : []);
   }
 
   async function loadSubs(catId?: string) {
     setLoading(true);
     const q = catId && catId !== "all" ? `?category_id=${catId}` : "";
     const res = await fetch(`/api/admin/subcategories${q}`);
-    setSubcategories(await res.json());
+    const data = res.ok ? await res.json() : [];
+    setSubcategories(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 

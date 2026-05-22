@@ -40,7 +40,8 @@ export default function SuppliersPage() {
   async function load() {
     setLoading(true);
     const res = await fetch("/api/admin/suppliers");
-    setSuppliers(await res.json());
+    const data = res.ok ? await res.json() : [];
+    setSuppliers(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 

@@ -33,8 +33,8 @@ export default function CategoriesPage() {
   async function load() {
     setLoading(true);
     const res = await fetch("/api/admin/categories");
-    const data = await res.json();
-    setCategories(data);
+    const data = res.ok ? await res.json() : [];
+    setCategories(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
