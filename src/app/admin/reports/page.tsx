@@ -8,7 +8,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { TrendingUp, DollarSign, ShoppingCart, Users, Truck, Star } from "lucide-react";
+import { TrendingUp, DollarSign, ShoppingCart, Users, Truck, Star, Loader2, BarChart3 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -32,18 +32,22 @@ interface ReportData {
   supplier_health: SupplierRow[];
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color }: {
-  icon: React.ElementType; label: string; value: string; sub?: string; color?: string;
+function KpiCard({ icon: Icon, label, value, sub, color, bg }: {
+  icon: React.ElementType; label: string; value: string; sub?: string; color?: string; bg?: string;
 }) {
   return (
-    <Card>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Icon className={cn("h-4 w-4", color ?? "text-muted-foreground")} />
-          <p className="text-xs text-muted-foreground">{label}</p>
+    <Card className="border-0 shadow-sm bg-white">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
+            <p className={cn("text-2xl font-bold", color ?? "text-foreground")}>{value}</p>
+            {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+          </div>
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", bg ?? "bg-muted")}>
+            <Icon className={cn("h-5 w-5", color ?? "text-muted-foreground")} />
+          </div>
         </div>
-        <p className={cn("text-2xl font-bold mt-0.5", color)}>{value}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
       </CardContent>
     </Card>
   );
@@ -91,28 +95,40 @@ export default function ReportsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-20 text-muted-foreground text-sm">Loading analytics…</div>;
-  if (!data) return <div className="text-center py-20 text-destructive">Failed to load report data.</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+  if (!data) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <BarChart3 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+      <p className="font-medium text-sm">Failed to load analytics</p>
+      <p className="text-xs text-muted-foreground mt-1">Check your database connection and try again.</p>
+    </div>
+  );
 
   const { overview, monthly, top_buyers, agent_performance, supplier_health } = data;
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Platform-wide performance — all time</p>
+      <div className="mb-7 pb-5 border-b flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Platform-wide performance — all time</p>
+        </div>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <KpiCard icon={DollarSign} label="Total Revenue" value={formatCurrency(overview.total_revenue)} sub={`${formatCurrency(overview.total_margin)} margin`} color="text-blue-600" />
-        <KpiCard icon={TrendingUp} label="Avg Margin" value={`${overview.avg_margin_pct.toFixed(1)}%`} sub={`${formatCurrency(overview.total_commission)} commission paid`} color="text-green-600" />
-        <KpiCard icon={ShoppingCart} label="Total Orders" value={String(overview.total_orders)} sub={`${overview.active_buyers} buyers`} />
-        <KpiCard icon={Users} label="Active Agents" value={String(overview.active_agents)} sub={`${formatCurrency(overview.total_commission)} total commission`} />
+        <KpiCard icon={DollarSign} label="Total Revenue" value={formatCurrency(overview.total_revenue)} sub={`${formatCurrency(overview.total_margin)} margin`} color="text-blue-600" bg="bg-blue-50" />
+        <KpiCard icon={TrendingUp} label="Avg Margin" value={`${overview.avg_margin_pct.toFixed(1)}%`} sub={`${formatCurrency(overview.total_commission)} commission paid`} color="text-emerald-600" bg="bg-emerald-50" />
+        <KpiCard icon={ShoppingCart} label="Total Orders" value={String(overview.total_orders)} sub={`${overview.active_buyers} active buyers`} color="text-orange-600" bg="bg-orange-50" />
+        <KpiCard icon={Users} label="Active Agents" value={String(overview.active_agents)} sub={`${formatCurrency(overview.total_commission)} commission total`} color="text-violet-600" bg="bg-violet-50" />
       </div>
 
       {/* Revenue chart */}
-      <Card className="mb-6">
+      <Card className="mb-6 border-0 shadow-sm bg-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Revenue, Cost & Margin — Last 12 Months</CardTitle>
         </CardHeader>
@@ -137,7 +153,7 @@ export default function ReportsPage() {
       </Card>
 
       {/* Order volume line */}
-      <Card className="mb-8">
+      <Card className="mb-8 border-0 shadow-sm bg-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Order Volume — Last 12 Months</CardTitle>
         </CardHeader>
@@ -162,7 +178,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Top buyers */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 border-0 shadow-sm bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" /> Top Buyers
@@ -188,7 +204,7 @@ export default function ReportsPage() {
         </Card>
 
         {/* Agent performance */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 border-0 shadow-sm bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" /> Agent Performance
@@ -217,7 +233,7 @@ export default function ReportsPage() {
         </Card>
 
         {/* Supplier health */}
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 border-0 shadow-sm bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Truck className="h-4 w-4 text-muted-foreground" /> Supplier Health
@@ -247,7 +263,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Full supplier table */}
-      <Card className="mt-6">
+      <Card className="mt-6 border-0 shadow-sm bg-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Star className="h-4 w-4 text-muted-foreground" /> Supplier Scorecard

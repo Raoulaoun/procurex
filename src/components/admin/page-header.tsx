@@ -10,14 +10,14 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, onAdd, addLabel = "Add" }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-7 pb-5 border-b">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
       </div>
       {onAdd && (
-        <Button onClick={onAdd} size="sm">
-          <Plus className="h-4 w-4 mr-1.5" />
+        <Button onClick={onAdd} size="sm" className="gap-1.5" style={{ backgroundColor: "#0d2144" }}>
+          <Plus className="h-4 w-4" />
           {addLabel}
         </Button>
       )}

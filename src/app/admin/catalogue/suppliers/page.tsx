@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Truck, Pencil, Trash2, ChevronRight, Star } from "lucide-react";
+import { Truck, Pencil, Trash2, ChevronRight, Star, Loader2 } from "lucide-react";
 
 interface Supplier {
   id: string; name: string; email: string; phone: string | null; country: string;
@@ -26,6 +26,19 @@ function StatusBadge({ status }: { status: string }) {
     active: "success", inactive: "secondary", suspended: "destructive",
   };
   return <Badge variant={variants[status] ?? "secondary"}>{status}</Badge>;
+}
+
+function QualityBar({ score }: { score: number }) {
+  const pct = (score / 10) * 100;
+  const color = score >= 7 ? "bg-emerald-500" : score >= 5 ? "bg-amber-400" : "bg-red-400";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-sm font-medium">{Number(score).toFixed(1)}</span>
+    </div>
+  );
 }
 
 export default function SuppliersPage() {
@@ -60,10 +73,7 @@ export default function SuppliersPage() {
     const { editing } = modal;
     const url = editing ? `/api/admin/suppliers/${editing.id}` : "/api/admin/suppliers";
     const method = editing ? "PUT" : "POST";
-    await fetch(url, {
-      method, headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, status: editStatus }),
-    });
+    await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, status: editStatus }) });
     setSaving(false);
     closeModal();
     load();
@@ -80,45 +90,50 @@ export default function SuppliersPage() {
       <PageHeader title="Suppliers" description="Manage suppliers and their product catalogues" onAdd={openAdd} addLabel="Add Supplier" />
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       ) : suppliers.length === 0 ? (
         <EmptyState icon={Truck} title="No suppliers yet" description="Add suppliers to start building price catalogues." onAdd={openAdd} addLabel="Add Supplier" />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Quality Score</TableHead>
-                <TableHead>Products</TableHead>
-                <TableHead className="w-28" />
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-semibold">Supplier</TableHead>
+                <TableHead className="font-semibold">Country</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="font-semibold">Quality Score</TableHead>
+                <TableHead className="font-semibold">Products</TableHead>
+                <TableHead className="w-32" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {suppliers.map((s) => (
-                <TableRow key={s.id}>
+                <TableRow key={s.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell>
                     <div className="font-medium">{s.name}</div>
                     <div className="text-xs text-muted-foreground">{s.email}</div>
                   </TableCell>
-                  <TableCell>{s.country}</TableCell>
-                  <TableCell><StatusBadge status={s.status} /></TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                      <span>{Number(s.quality_score).toFixed(1)}</span>
-                    </div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600">
+                      {s.country}
+                    </span>
                   </TableCell>
-                  <TableCell>{s._count.supplier_products}</TableCell>
+                  <TableCell><StatusBadge status={s.status} /></TableCell>
+                  <TableCell><QualityBar score={s.quality_score} /></TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {s._count.supplier_products} products
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => router.push(`/admin/catalogue/suppliers/${s.id}`)}>
-                        Prices <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                      <Button variant="ghost" size="sm" className="text-xs h-8 gap-1" onClick={() => router.push(`/admin/catalogue/suppliers/${s.id}`)}>
+                        Prices <ChevronRight className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(s.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(s)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(s.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

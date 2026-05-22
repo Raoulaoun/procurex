@@ -9,16 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tag, Pencil, Trash2 } from "lucide-react";
+import { Tag, Pencil, Trash2, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Category {
-  id: string;
-  name: string;
-  name_ar: string;
-  margin_pct: number;
-  created_at: string;
-  _count: { subcategories: number };
+  id: string; name: string; name_ar: string; margin_pct: number;
+  created_at: string; _count: { subcategories: number };
 }
 
 const empty = { name: "", name_ar: "", margin_pct: 10 };
@@ -66,41 +62,42 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Categories"
-        description="Manage product categories and their margin rates"
-        onAdd={openAdd}
-        addLabel="Add Category"
-      />
+      <PageHeader title="Categories" description="Manage product categories and their margin rates" onAdd={openAdd} addLabel="Add Category" />
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       ) : categories.length === 0 ? (
         <EmptyState icon={Tag} title="No categories yet" description="Add your first category to start building the catalogue." onAdd={openAdd} addLabel="Add Category" />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Arabic Name</TableHead>
-                <TableHead>Margin</TableHead>
-                <TableHead>Subcategories</TableHead>
-                <TableHead>Created</TableHead>
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Arabic Name</TableHead>
+                <TableHead className="font-semibold">Margin</TableHead>
+                <TableHead className="font-semibold">Subcategories</TableHead>
+                <TableHead className="font-semibold">Created</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {categories.map((cat) => (
-                <TableRow key={cat.id}>
+                <TableRow key={cat.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell className="font-medium">{cat.name}</TableCell>
-                  <TableCell dir="rtl" className="font-medium">{cat.name_ar}</TableCell>
+                  <TableCell dir="rtl" className="font-medium text-right">{cat.name_ar}</TableCell>
                   <TableCell>
                     <Badge variant={Number(cat.margin_pct) > 10 ? "default" : "secondary"}>
                       {Number(cat.margin_pct).toFixed(1)}%
                     </Badge>
                   </TableCell>
-                  <TableCell>{cat._count.subcategories}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {cat._count.subcategories}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(cat.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
@@ -130,7 +127,7 @@ export default function CategoriesPage() {
             <Input className="mt-1" dir="rtl" value={form.name_ar} onChange={(e) => setForm({ ...form, name_ar: e.target.value })} placeholder="المواد الكيميائية" />
           </div>
           <div>
-            <Label>Margin % (min 10)</Label>
+            <Label>Margin % <span className="text-muted-foreground font-normal">(min 10)</span></Label>
             <Input className="mt-1" type="number" min="10" step="0.5" value={form.margin_pct} onChange={(e) => setForm({ ...form, margin_pct: Number(e.target.value) })} />
           </div>
         </div>

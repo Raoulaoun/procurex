@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Layers, Pencil, Trash2 } from "lucide-react";
+import { Layers, Pencil, Trash2, Loader2 } from "lucide-react";
 
 interface Category { id: string; name: string }
 interface Subcategory {
@@ -79,10 +79,10 @@ export default function SubcategoriesPage() {
     <div>
       <PageHeader title="Subcategories" description="Manage subcategories within each product category" onAdd={openAdd} addLabel="Add Subcategory" />
 
-      <div className="mb-4 flex items-center gap-3">
-        <Label className="text-sm shrink-0">Filter by category:</Label>
+      <div className="mb-5 flex items-center gap-3">
+        <Label className="text-sm shrink-0 text-muted-foreground">Filter by category:</Label>
         <Select value={filterCat} onValueChange={handleFilterChange}>
-          <SelectTrigger className="w-52">
+          <SelectTrigger className="w-52 bg-white">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
@@ -93,28 +93,38 @@ export default function SubcategoriesPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       ) : subcategories.length === 0 ? (
         <EmptyState icon={Layers} title="No subcategories" description="Add subcategories to organise your products." onAdd={openAdd} addLabel="Add Subcategory" />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Arabic Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Products</TableHead>
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Arabic Name</TableHead>
+                <TableHead className="font-semibold">Category</TableHead>
+                <TableHead className="font-semibold">Products</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {subcategories.map((sub) => (
-                <TableRow key={sub.id}>
+                <TableRow key={sub.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell className="font-medium">{sub.name}</TableCell>
-                  <TableCell dir="rtl">{sub.name_ar}</TableCell>
-                  <TableCell className="text-muted-foreground">{sub.category.name}</TableCell>
-                  <TableCell>{sub._count.products}</TableCell>
+                  <TableCell dir="rtl" className="text-right">{sub.name_ar}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                      {sub.category.name}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {sub._count.products}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(sub)}><Pencil className="h-3.5 w-3.5" /></Button>

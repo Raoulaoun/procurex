@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Package, Pencil, Trash2, Search } from "lucide-react";
+import { Package, Pencil, Trash2, Search, Loader2, X } from "lucide-react";
 
 interface Category { id: string; name: string }
 interface Subcategory { id: string; name: string; category_id: string }
@@ -105,62 +105,96 @@ export default function ProductsPage() {
     loadProducts(filterSub, search);
   }
 
+  function clearSearch() {
+    setSearch("");
+    loadProducts(filterSub, "");
+  }
+
   return (
     <div>
       <PageHeader title="Products" description="Manage all products in the catalogue" onAdd={openAdd} addLabel="Add Product" />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         <Select value={filterCat} onValueChange={handleCatFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="All categories" /></SelectTrigger>
+          <SelectTrigger className="w-44 bg-white"><SelectValue placeholder="All categories" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
             {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSub} onValueChange={handleSubFilter}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="All subcategories" /></SelectTrigger>
+          <SelectTrigger className="w-44 bg-white"><SelectValue placeholder="All subcategories" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All subcategories</SelectItem>
             {filteredSubs.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <form onSubmit={handleSearch} className="flex gap-2">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products…" className="w-52" />
-          <Button type="submit" variant="outline" size="icon"><Search className="h-4 w-4" /></Button>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products…"
+              className="w-52 pl-8 bg-white"
+            />
+            {search && (
+              <button type="button" onClick={clearSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+          <Button type="submit" variant="outline" size="sm" className="bg-white">Search</Button>
         </form>
+        <span className="text-xs text-muted-foreground ml-auto">{products.length} product{products.length !== 1 ? "s" : ""}</span>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading…</div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       ) : products.length === 0 ? (
         <EmptyState icon={Package} title="No products found" description="Add products or adjust your filters." onAdd={openAdd} addLabel="Add Product" />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="rounded-xl border overflow-hidden bg-white shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Arabic Name</TableHead>
-                <TableHead>Category / Subcategory</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Suppliers</TableHead>
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Arabic Name</TableHead>
+                <TableHead className="font-semibold">Category / Subcategory</TableHead>
+                <TableHead className="font-semibold">Unit</TableHead>
+                <TableHead className="font-semibold">Suppliers</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell dir="rtl">{p.name_ar}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.subcategory.category.name} / {p.subcategory.name}
+                  <TableCell dir="rtl" className="text-right">{p.name_ar}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                        {p.subcategory.category.name}
+                      </span>
+                      <span className="text-muted-foreground text-xs">/ {p.subcategory.name}</span>
+                    </div>
                   </TableCell>
-                  <TableCell>{p.unit}</TableCell>
-                  <TableCell>{p._count.supplier_products}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600">
+                      {p.unit}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {p._count.supplier_products}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(p.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -201,7 +235,7 @@ export default function ProductsPage() {
             <Input className="mt-1" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="e.g. kg, L, pcs" />
           </div>
           <div>
-            <Label>Description (optional)</Label>
+            <Label>Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Textarea className="mt-1" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
           </div>
         </div>
