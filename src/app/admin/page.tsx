@@ -3,12 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tag, Layers, Package, Truck } from "lucide-react";
 
 export default async function AdminDashboard() {
-  const [categories, subcategories, products, suppliers] = await Promise.all([
-    prisma.category.count(),
-    prisma.subcategory.count(),
-    prisma.product.count(),
-    prisma.supplier.count(),
-  ]);
+  let categories = 0, subcategories = 0, products = 0, suppliers = 0;
+  try {
+    [categories, subcategories, products, suppliers] = await Promise.all([
+      prisma.category.count(),
+      prisma.subcategory.count(),
+      prisma.product.count(),
+      prisma.supplier.count(),
+    ]);
+  } catch {
+    // DB unreachable — show zeros rather than crashing
+  }
 
   const stats = [
     { label: "Categories", value: categories, icon: Tag, href: "/admin/catalogue/categories" },
