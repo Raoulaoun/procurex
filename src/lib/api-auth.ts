@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-// DEV MODE: admin check always passes
+// DEV MODE: look up first super_admin so audit log FK stays valid
 export async function requireAdmin() {
-  return { user: { id: "dev", user_metadata: { role: "super_admin" } }, error: undefined };
+  const profile = await prisma.userProfile.findFirst({ where: { role: "super_admin" } });
+  if (!profile) {
+    return { error: NextResponse.json({ error: "No super_admin profile found. Run the seed." }, { status: 500 }) };
+  }
+  return { user: { id: profile.id, email: profile.email, user_metadata: { role: "super_admin" } }, error: undefined as undefined };
 }
 
 export function ok<T>(data: T, status = 200) {

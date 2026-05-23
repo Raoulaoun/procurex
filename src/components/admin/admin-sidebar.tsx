@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutGrid, Tag, Layers, Package, Truck, BarChart3, Users, ShoppingCart, FileText, ArrowLeft,
+  LayoutGrid, Tag, Layers, Package, Truck, BarChart3, Users, ShoppingCart, FileText, ArrowLeft, Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,6 +31,7 @@ const navItems: NavEntry[] = [
       { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
       { label: "Agents", href: "/admin/agents", icon: Users },
       { label: "Invoices", href: "/admin/invoices", icon: FileText },
+      { label: "Commissions", href: "/admin/commissions", icon: Wallet },
     ],
   },
   {
