@@ -50,7 +50,7 @@ function StatusPill({ status }: { status: string }) {
 const FUNNEL_STAGES = [
   { key: "prospects", label: "Prospects", color: "#0d2144" },
   { key: "quotes", label: "Quotes Sent", color: "#1e4db7" },
-  { key: "confirmed", label: "Confirmed", color: "#3b82f6" },
+  { key: "confirmed", label: "Agent-Confirmed", color: "#3b82f6" },
   { key: "delivered", label: "Delivered", color: "#10b981" },
 ];
 

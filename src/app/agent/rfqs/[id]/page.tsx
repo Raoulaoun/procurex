@@ -19,7 +19,7 @@ interface RFQ {
 const STATUS: Record<string, { bg: string; text: string; label: string }> = {
   draft:     { bg: "#f3f4f6", text: "#374151", label: "Draft" },
   sent:      { bg: "#fef3c7", text: "#b45309", label: "Sent" },
-  confirmed: { bg: "#d1fae5", text: "#065f46", label: "Confirmed" },
+  confirmed: { bg: "#d1fae5", text: "#065f46", label: "Agent-Confirmed" },
   cancelled: { bg: "#fee2e2", text: "#b91c1c", label: "Cancelled" },
 };
 

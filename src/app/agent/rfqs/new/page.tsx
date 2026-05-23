@@ -517,14 +517,19 @@ function NewRFQForm() {
               >
                 Edit Products
               </button>
-              <button
-                onClick={handleConfirm}
-                disabled={!allSelected || saving}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
-                style={{ backgroundColor: "#0d2144" }}
-              >
-                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Confirm & Generate Quote"}
-              </button>
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={handleConfirm}
+                  disabled={!allSelected || saving}
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-60"
+                  style={{ backgroundColor: "#0d2144" }}
+                >
+                  {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Confirm on behalf of buyer"}
+                </button>
+                <p className="text-xs text-gray-500 max-w-xs text-right">
+                  Click once the buyer has verbally approved the quote (WhatsApp, call, or in person). This locks the quote and prepares it for conversion to an order.
+                </p>
+              </div>
             </div>
           </div>
         </div>
