@@ -364,6 +364,21 @@ model Commission {
   @@map("commissions")
 }
 
+// ─── Landing Page ────────────────────────────────────────────────────────────
+
+model DemoRequest {
+  id         String   @id @default(uuid())
+  name       String
+  company    String
+  email      String
+  phone      String?
+  role       String   // "agent" | "supplier" | "buyer"
+  message    String?
+  created_at DateTime @default(now())
+
+  @@map("demo_requests")
+}
+
 // ─── Commission Audit Log ─────────────────────────────────────────────────────
 
 model CommissionAuditLog {
