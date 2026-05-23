@@ -3,16 +3,23 @@ import { ok, err } from "@/lib/api-auth";
 import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 
+// GET: List all SubPO surveys submitted by this agent's orders
 export async function GET() {
   const auth = await requireAgent();
   if ("error" in auth && auth.error) return auth.error;
   const { agent } = auth as { agent: { id: string } };
 
-  const surveys = await prisma.qASurvey.findMany({
-    where: { order: { agent_id: agent.id } },
+  const surveys = await prisma.subPOSurvey.findMany({
+    where: { subpo: { order: { agent_id: agent.id } } },
     orderBy: { submitted_at: "desc" },
     include: {
-      order: { select: { id: true } },
+      subpo: {
+        select: {
+          id: true,
+          order: { select: { id: true } },
+          supplier: { select: { name: true, country: true } },
+        },
+      },
       buyer: { select: { name: true, company: true } },
     },
   });
@@ -20,42 +27,49 @@ export async function GET() {
   return ok(surveys);
 }
 
+// POST: Submit a QA survey for a specific delivered SubPO
+// Business rules:
+//   - subpo_id must belong to an order owned by this agent
+//   - SubPO must be in `delivered` status
+//   - Only one survey per SubPO (enforced by DB unique constraint + check below)
+//   - Rolling quality_score on Supplier is recomputed using only surveys for
+//     that supplier's SubPOs — no cross-supplier contamination
 export async function POST(req: NextRequest) {
   const auth = await requireAgent();
   if ("error" in auth && auth.error) return auth.error;
   const { agent } = auth as { agent: { id: string } };
 
   const body = await req.json();
-  const { order_id, delivery_score, quality_score, accuracy_score, packaging_score, comments } = body;
+  const { subpo_id, delivery_score, quality_score, accuracy_score, packaging_score, comments } = body;
 
-  // Validate scores
+  if (!subpo_id) return err("subpo_id is required", 400);
+
   const scores = [delivery_score, quality_score, accuracy_score, packaging_score];
-  if (scores.some((s) => typeof s !== "number" || s < 1 || s > 5)) {
+  if (scores.some((s) => typeof s !== "number" || !Number.isInteger(s) || s < 1 || s > 5)) {
     return err("All scores must be integers between 1 and 5", 400);
   }
 
-  // Check order belongs to agent and is delivered
-  const order = await prisma.order.findFirst({
-    where: { id: order_id, agent_id: agent.id },
+  // Validate SubPO belongs to this agent's order and is delivered
+  const subpo = await prisma.subPO.findFirst({
+    where: { id: subpo_id, order: { agent_id: agent.id } },
     include: {
-      surveys: true,
-      subpos: { select: { supplier_id: true, status: true } },
+      order: { select: { buyer_id: true } },
+      survey: { select: { id: true } },
     },
   });
 
-  if (!order) return err("Order not found", 404);
-  if (order.status !== "delivered") return err("Order must be fully delivered before submitting a QA survey", 400);
-  if (order.surveys.length > 0) return err("A survey has already been submitted for this order", 409);
+  if (!subpo) return err("SubPO not found", 404);
+  if (subpo.status !== "delivered") return err("SubPO must be delivered before submitting a survey", 400);
+  if (subpo.survey) return err("A survey has already been submitted for this shipment", 409);
 
   const overall = (delivery_score + quality_score + accuracy_score + packaging_score) / 4;
-  // Scale to 0–10
   const overall_score = parseFloat(((overall / 5) * 10).toFixed(2));
 
   const survey = await prisma.$transaction(async (tx) => {
-    const newSurvey = await tx.qASurvey.create({
+    const newSurvey = await tx.subPOSurvey.create({
       data: {
-        order_id,
-        buyer_id: order.buyer_id,
+        subpo_id,
+        buyer_id: subpo.order.buyer_id,
         delivery_score,
         quality_score,
         accuracy_score,
@@ -65,25 +79,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update rolling quality_score for each supplier involved in this order
-    for (const subpo of order.subpos) {
-      const supplierId = subpo.supplier_id;
+    // Recompute rolling quality_score for the supplier — using only surveys
+    // scoped to this supplier's SubPOs (clean, no cross-supplier contamination)
+    const supplierId = subpo.supplier_id;
+    const allSurveys = await tx.subPOSurvey.findMany({
+      where: { subpo: { supplier_id: supplierId } },
+      select: { overall_score: true },
+    });
 
-      // Count all delivered orders for this supplier and calculate new rolling average
-      const allSurveys = await tx.qASurvey.findMany({
-        where: { order: { subpos: { some: { supplier_id: supplierId } } } },
-      });
-
-      const count = allSurveys.length; // includes the one we just created
-      const avgScore = count > 0
-        ? allSurveys.reduce((s, sv) => s + Number(sv.overall_score), 0) / count
-        : overall_score;
-
-      await tx.supplier.update({
-        where: { id: supplierId },
-        data: { quality_score: parseFloat(avgScore.toFixed(2)) },
-      });
-    }
+    const avgScore = allSurveys.reduce((s, sv) => s + Number(sv.overall_score), 0) / allSurveys.length;
+    await tx.supplier.update({
+      where: { id: supplierId },
+      data: { quality_score: parseFloat(avgScore.toFixed(2)) },
+    });
 
     return newSurvey;
   });

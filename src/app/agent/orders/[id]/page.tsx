@@ -9,6 +9,7 @@ interface SubPOLine { id: string; quantity: string; unit_price: string; product:
 interface SubPO {
   id: string; status: string; total_amount: string; sent_at: string | null;
   acknowledged_at: string | null; dispatched_at: string | null; delivered_at: string | null;
+  survey_id: string | null;
   supplier: { id: string; name: string; country: string };
   line_items: SubPOLine[];
 }
@@ -19,8 +20,6 @@ interface Order {
   rfq: { id: string; notes: string | null };
   subpos: SubPO[];
   commission: { commission_earned: string; commission_rate: string; status: string } | null;
-  survey_submitted: boolean;
-  survey_id: string | null;
 }
 
 const ORDER_STATUS: Record<string, { bg: string; text: string; label: string }> = {
@@ -158,25 +157,6 @@ export default function OrderDetailPage() {
           </div>
           <p className="text-sm text-gray-400 mt-0.5">Created {formatDate(order.created_at)}</p>
         </div>
-        <div className="flex gap-2">
-          {order.status === "delivered" && !order.survey_submitted && (
-            <button
-              onClick={() => router.push(`/agent/surveys/new?order_id=${order.id}`)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              style={{ backgroundColor: "#0d2144" }}
-            >
-              <Star className="h-4 w-4" /> Submit QA Survey
-            </button>
-          )}
-          {order.status === "delivered" && order.survey_submitted && order.survey_id && (
-            <button
-              onClick={() => router.push(`/agent/surveys/${order.survey_id}`)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Star className="h-4 w-4" /> View Survey
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Two-column layout */}
@@ -190,9 +170,33 @@ export default function OrderDetailPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-mono text-sm font-semibold text-gray-900">PO-{subpo.id.slice(0, 8).toUpperCase()}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{subpo.supplier.country}</p>
+                  <p className="text-sm font-medium text-gray-700 mt-0.5">{subpo.supplier.name}</p>
+                  <p className="text-xs text-gray-400">{subpo.supplier.country}</p>
                 </div>
-                <p className="font-bold text-gray-900">{formatCurrency(Number(subpo.total_amount))}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-bold text-gray-900">{formatCurrency(Number(subpo.total_amount))}</p>
+                  {/* Per-SubPO survey CTA — only shown when delivered */}
+                  {subpo.status === "delivered" && (
+                    subpo.survey_id ? (
+                      <button
+                        onClick={() => router.push(`/agent/surveys/${subpo.survey_id}`)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        <Star className="h-3.5 w-3.5" /> View Rating
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push(
+                          `/agent/surveys/new?subpo_id=${subpo.id}&order_id=${order.id}&supplier_name=${encodeURIComponent(subpo.supplier.name)}`
+                        )}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
+                        style={{ backgroundColor: "#0d2144" }}
+                      >
+                        <Star className="h-3.5 w-3.5" /> Rate {subpo.supplier.name}
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
 
               <ShipmentProgress orderId={id} subpo={subpo} onUpdate={load} />
@@ -263,7 +267,7 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {/* Assigned Officer */}
+          {/* Client Contact */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <User className="h-4 w-4 text-gray-400" /> Client Contact

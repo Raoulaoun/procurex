@@ -111,11 +111,11 @@ model Buyer {
   assigned_agent_id String
   created_at       DateTime @default(now())
 
-  agent    Agent     @relation(fields: [assigned_agent_id], references: [id])
+  agent    Agent         @relation(fields: [assigned_agent_id], references: [id])
   rfqs     RFQ[]
   orders   Order[]
   invoices Invoice[]
-  surveys  QASurvey[]
+  surveys  SubPOSurvey[]
 
   @@map("buyers")
 }
@@ -254,7 +254,6 @@ model Order {
   agent      Agent        @relation(fields: [agent_id], references: [id])
   subpos     SubPO[]
   invoices   Invoice[]
-  surveys    QASurvey[]
   commission Commission?
 
   @@map("orders")
@@ -276,6 +275,7 @@ model SubPO {
   order      Order          @relation(fields: [order_id], references: [id])
   supplier   Supplier       @relation(fields: [supplier_id], references: [id])
   line_items SubPOLineItem[]
+  survey     SubPOSurvey?
 
   @@map("sub_pos")
 }
@@ -313,24 +313,24 @@ model Invoice {
   @@map("invoices")
 }
 
-// ─── QA Survey ───────────────────────────────────────────────────────────────
+// ─── QA Survey (per SubPO — one per fulfilled shipment) ──────────────────────
 
-model QASurvey {
+model SubPOSurvey {
   id               String   @id @default(uuid())
-  order_id         String
+  subpo_id         String   @unique // one survey per SubPO
   buyer_id         String
   delivery_score   Int      // 1–5
   quality_score    Int
   accuracy_score   Int
   packaging_score  Int
-  overall_score    Decimal  @db.Decimal(4, 2) // calculated average
+  overall_score    Decimal  @db.Decimal(4, 2) // calculated average, scaled 0–10
   comments         String?
   submitted_at     DateTime @default(now())
 
-  order Order @relation(fields: [order_id], references: [id])
+  subpo SubPO @relation(fields: [subpo_id], references: [id])
   buyer Buyer @relation(fields: [buyer_id], references: [id])
 
-  @@map("qa_surveys")
+  @@map("subpo_surveys")
 }
 
 // ─── Commissions ─────────────────────────────────────────────────────────────

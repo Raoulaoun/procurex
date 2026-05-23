@@ -44,17 +44,17 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 function SurveyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const subpoId = searchParams.get("subpo_id") ?? "";
   const orderId = searchParams.get("order_id") ?? "";
+  const supplierName = searchParams.get("supplier_name") ?? "";
 
   const [scores, setScores] = useState({ delivery_score: 0, quality_score: 0, accuracy_score: 0, packaging_score: 0 });
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [orderRef, setOrderRef] = useState("");
 
-  useEffect(() => {
-    if (orderId) setOrderRef(`ORD-${orderId.slice(0, 8).toUpperCase()}`);
-  }, [orderId]);
+  const poRef = subpoId ? `PO-${subpoId.slice(0, 8).toUpperCase()}` : "";
+  const orderRef = orderId ? `ORD-${orderId.slice(0, 8).toUpperCase()}` : "";
 
   const allScored = Object.values(scores).every((v) => v > 0);
   const overall = allScored
@@ -69,7 +69,7 @@ function SurveyForm() {
     const res = await fetch("/api/agent/surveys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: orderId, ...scores, comments: comments || null }),
+      body: JSON.stringify({ subpo_id: subpoId, ...scores, comments: comments || null }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -77,10 +77,10 @@ function SurveyForm() {
     else setError(data.error ?? "Failed to submit survey");
   }
 
-  if (!orderId) {
+  if (!subpoId) {
     return (
       <div className="text-center py-16 text-red-500">
-        No order specified. Please navigate here from an order page.
+        No shipment specified. Please navigate here from an order page.
       </div>
     );
   }
@@ -89,17 +89,25 @@ function SurveyForm() {
     <form onSubmit={handleSubmit} className="max-w-2xl">
       <button
         type="button"
-        onClick={() => router.back()}
+        onClick={() => orderId ? router.push(`/agent/orders/${orderId}`) : router.back()}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Back
+        <ArrowLeft className="h-4 w-4" /> Back to Order
       </button>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">QA Survey</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Order <span className="font-mono font-medium text-gray-700">{orderRef}</span> — Rate 1 (poor) to 5 (excellent)
+          Rating for shipment{" "}
+          <span className="font-mono font-medium text-gray-700">{poRef}</span>
+          {supplierName && (
+            <> · <span className="font-medium text-gray-700">{supplierName}</span></>
+          )}
+          {orderRef && (
+            <> · Order <span className="font-mono font-medium text-gray-700">{orderRef}</span></>
+          )}
         </p>
+        <p className="text-xs text-gray-400 mt-1">Rate 1 (poor) to 5 (excellent)</p>
       </div>
 
       <div className="space-y-3 mb-6">
@@ -115,7 +123,6 @@ function SurveyForm() {
         ))}
       </div>
 
-      {/* Overall preview */}
       {overall && (
         <div className="rounded-xl p-4 mb-4 flex items-center justify-between" style={{ backgroundColor: "#f0f4ff", border: "1px solid #c7d7ff" }}>
           <p className="text-sm font-medium text-blue-900">Calculated Overall Score</p>
@@ -123,7 +130,6 @@ function SurveyForm() {
         </div>
       )}
 
-      {/* Comments */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
         <p className="text-sm font-semibold text-gray-900 mb-1">Comments <span className="text-gray-400 font-normal">(optional)</span></p>
         <textarea

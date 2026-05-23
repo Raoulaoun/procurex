@@ -38,7 +38,7 @@ async function main() {
 
   // ── 1. Clear existing data (order matters for FK constraints) ────────────────
   await prisma.commission.deleteMany();
-  await prisma.qASurvey.deleteMany();
+  await prisma.subPOSurvey.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.subPOLineItem.deleteMany();
   await prisma.subPO.deleteMany();
@@ -436,15 +436,15 @@ async function main() {
     return parseFloat(((d + q + a + p) / 4 / 5 * 10).toFixed(2));
   }
 
-  await prisma.qASurvey.create({ data: {
-    order_id: ord1.id, buyer_id: bOmar.id,
+  await prisma.subPOSurvey.create({ data: {
+    subpo_id: subpo1.id, buyer_id: bOmar.id,
     delivery_score: 5, quality_score: 5, accuracy_score: 4, packaging_score: 5,
     overall_score: calcOverall(5,5,4,5),
     comments: "Excellent delivery — products arrived perfectly chilled and on time. Will order again.",
     submitted_at: daysAgo(54),
   }});
-  await prisma.qASurvey.create({ data: {
-    order_id: ord2.id, buyer_id: bSara.id,
+  await prisma.subPOSurvey.create({ data: {
+    subpo_id: subpo2a.id, buyer_id: bSara.id,
     delivery_score: 4, quality_score: 5, accuracy_score: 5, packaging_score: 4,
     overall_score: calcOverall(4,5,5,4),
     comments: "Premium cheese quality was outstanding. Slight delay on dispatch but overall very happy.",

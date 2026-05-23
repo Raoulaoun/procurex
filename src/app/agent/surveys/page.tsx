@@ -12,7 +12,11 @@ interface Survey {
   accuracy_score: number;
   packaging_score: number;
   submitted_at: string;
-  order: { id: string };
+  subpo: {
+    id: string;
+    order: { id: string };
+    supplier: { name: string; country: string };
+  };
   buyer: { name: string; company: string };
 }
 
@@ -60,6 +64,7 @@ export default function SurveysPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Supplier</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Buyer</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Delivery</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Quality</th>
@@ -74,7 +79,11 @@ export default function SurveysPage() {
               {surveys.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700">
-                    ORD-{s.order.id.slice(0, 8).toUpperCase()}
+                    ORD-{s.subpo.order.id.slice(0, 8).toUpperCase()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-900">{s.subpo.supplier.name}</p>
+                    <p className="text-xs text-gray-400">{s.subpo.supplier.country}</p>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{s.buyer.name}</p>

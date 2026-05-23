@@ -15,7 +15,11 @@ interface Survey {
   packaging_score: number;
   comments: string | null;
   submitted_at: string;
-  order: { id: string };
+  subpo: {
+    id: string;
+    order: { id: string; total_amount: string };
+    supplier: { name: string; country: string };
+  };
   buyer: { name: string; company: string };
 }
 
@@ -78,7 +82,9 @@ export default function SurveyDetailPage() {
             </span>
           </div>
           <p className="text-sm text-gray-400 mt-0.5">
-            Order <span className="font-mono">ORD-{survey.order.id.slice(0, 8).toUpperCase()}</span>
+            Order <span className="font-mono">ORD-{survey.subpo.order.id.slice(0, 8).toUpperCase()}</span>
+            {" · "}Shipment <span className="font-mono">PO-{survey.subpo.id.slice(0, 8).toUpperCase()}</span>
+            {" · "}{survey.subpo.supplier.name} ({survey.subpo.supplier.country})
             {" · "}{survey.buyer.name} ({survey.buyer.company})
             {" · "}Submitted {formatDate(survey.submitted_at)}
           </p>
