@@ -194,6 +194,10 @@ model SupplierProduct {
   lead_time_days Int
   moq          Int         @default(1) // minimum order quantity
   quality_tier QualityTier
+  // Supplier-declared flag — only raised when the supplier reports an issue (low/out).
+  // Defaults to ok and stays ok unless the supplier explicitly flags it.
+  // Updated manually via admin panel or monthly price refresh import.
+  // NOT a real-time inventory count. Do not auto-decrement on order placement.
   stock_status StockStatus @default(ok)
   last_updated DateTime    @default(now()) @updatedAt
 

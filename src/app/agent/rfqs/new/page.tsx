@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { cn, formatCurrency, qualityTierLabel } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, qualityTierLabel } from "@/lib/utils";
 import { ChevronRight, Search, Plus, Minus, Trash2, Check, ArrowLeft, Loader2 } from "lucide-react";
 
 interface Buyer { id: string; name: string; company: string }
@@ -12,7 +12,7 @@ interface Product { id: string; name: string; name_ar: string; unit: string; sub
 interface QuotationOption {
   rank: number; supplier_product_id: string; buyer_unit_price: number;
   currency: string; lead_time_days: number; moq: number;
-  quality_tier: string; stock_status: string; line_total: number;
+  quality_tier: string; stock_status: string; stock_last_updated: string | null; line_total: number;
 }
 interface LineItem {
   product_id: string; product_name: string; product_name_ar: string; product_unit: string;
@@ -486,7 +486,13 @@ function NewRFQForm() {
                             <p className="text-xs font-medium text-gray-600 mt-1">~{opt.lead_time_days} day delivery</p>
                             <div className="border-t border-gray-100 mt-2 pt-2">
                               <p className="text-xs text-gray-400">MOQ: {opt.moq}</p>
-                              <p className="text-xs font-medium mt-0.5" style={{ color: stock?.color }}>{stock?.label}</p>
+                              <p
+                                className="text-xs font-medium mt-0.5 cursor-help"
+                                style={{ color: stock?.color }}
+                                title={opt.stock_last_updated
+                                  ? `Supplier-declared status · Last updated: ${formatDate(opt.stock_last_updated)}`
+                                  : "Supplier-declared status · Last update unknown"}
+                              >{stock?.label}</p>
                             </div>
                           </button>
                         );

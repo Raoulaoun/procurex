@@ -90,6 +90,8 @@ export async function GET(req: NextRequest) {
     moq: sp.moq,
     quality_tier: sp.quality_tier,
     stock_status: sp.stock_status,
+    // Exposed so UI can show "last declared by supplier on {date}" tooltip
+    stock_last_updated: sp.last_updated,
     line_total: Number((applyMargin(Number(sp.unit_price), marginPct) * quantity).toFixed(2)),
     // supplier_id and supplier.name intentionally omitted — never expose to agent
   }));
