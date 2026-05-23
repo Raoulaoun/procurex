@@ -12,6 +12,8 @@ export interface SubPOEmailData {
   currency: string;
   deliveryAddress?: string | null;
   notes?: string | null;
+  // Pre-rendered PDF buffer — attached as PO-XXXXXX.pdf when provided
+  pdfAttachment?: Buffer;
 }
 
 export async function sendSubPOEmail(data: SubPOEmailData) {
@@ -42,6 +44,7 @@ export async function sendSubPOEmail(data: SubPOEmailData) {
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 24px;">
   <p>Dear <strong>${data.supplierName}</strong>,</p>
   <p>Please find below your purchase order from ProcureX. Kindly confirm receipt and advise on your expected dispatch date.</p>
+  ${data.pdfAttachment ? `<p style="font-size:13px;color:#374151;background:#f0f4ff;padding:12px;border-radius:4px;border:1px solid #c7d7ff;">📎 A PDF copy of this purchase order is attached for your records.</p>` : ""}
   <table style="width:100%;border-collapse:collapse;margin:24px 0;">
     <tr style="background:#f3f4f6;">
       <td style="padding:8px 12px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;">PO Reference</td>
@@ -83,6 +86,9 @@ export async function sendSubPOEmail(data: SubPOEmailData) {
     to: data.supplierEmail,
     subject: `Purchase Order ${data.subpoRef} from ProcureX`,
     html,
+    ...(data.pdfAttachment && {
+      attachments: [{ filename: `${data.subpoRef}.pdf`, content: data.pdfAttachment }],
+    }),
   });
 
   return result;

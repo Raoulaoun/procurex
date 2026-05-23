@@ -3,6 +3,10 @@ import { ok, err } from "@/lib/api-auth";
 import { requireAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { sendSubPOEmail } from "@/lib/email";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { SubPODocument, type SubPODocumentProps } from "@/components/pdf/subpo-document";
+import React from "react";
+import type { JSXElementConstructor, ReactElement } from "react";
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAgent();
@@ -138,23 +142,53 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
 
   for (const subpo of subpos) {
     try {
+      const subpoRef = `PO-${subpo.id.slice(0, 8).toUpperCase()}`;
+      const orderRef = `ORD-${order.id.slice(0, 8).toUpperCase()}`;
+      const emailLines = subpo.line_items.map((li) => ({
+        product_name: li.product.name,
+        quantity: Number(li.quantity),
+        unit: li.product.unit,
+        unit_price: Number(li.unit_price),
+        currency: "USD",
+        line_total: Number(li.unit_price) * Number(li.quantity),
+      }));
+
+      // Render SubPO PDF server-side — if this fails, send email without attachment
+      let pdfAttachment: Buffer | undefined;
+      try {
+        const pdfProps: SubPODocumentProps = {
+          subpoId: subpo.id,
+          orderId: order.id,
+          createdAt: subpo.created_at.toISOString(),
+          supplier: {
+            name: subpo.supplier.name,
+            email: subpo.supplier.email,
+            country: subpo.supplier.country,
+          },
+          deliveryAddress: rfq.buyer.address,
+          lines: emailLines.map((l, i) => ({ number: i + 1, ...l, product_unit: l.unit })),
+          notes: rfq.notes,
+        };
+        const element = React.createElement(
+          SubPODocument, pdfProps
+        ) as ReactElement<SubPODocumentProps, JSXElementConstructor<SubPODocumentProps>>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pdfAttachment = await renderToBuffer(element as any);
+      } catch (pdfErr) {
+        console.warn(`PDF rendering failed for SubPO ${subpo.id} — sending email without attachment:`, pdfErr);
+      }
+
       await sendSubPOEmail({
         supplierEmail: subpo.supplier.email,
         supplierName: subpo.supplier.name,
-        subpoRef: `PO-${subpo.id.slice(0, 8).toUpperCase()}`,
-        orderRef: `ORD-${order.id.slice(0, 8).toUpperCase()}`,
-        lines: subpo.line_items.map((li) => ({
-          product_name: li.product.name,
-          quantity: Number(li.quantity),
-          unit: li.product.unit,
-          unit_price: Number(li.unit_price),
-          currency: "USD",
-          line_total: Number(li.unit_price) * Number(li.quantity),
-        })),
+        subpoRef,
+        orderRef,
+        lines: emailLines,
         total: Number(subpo.total_amount),
         currency: "USD",
         deliveryAddress: rfq.buyer.address,
         notes: rfq.notes,
+        pdfAttachment,
       });
     } catch (e) {
       console.error(`Failed to send SubPO email for ${subpo.id}:`, e);
